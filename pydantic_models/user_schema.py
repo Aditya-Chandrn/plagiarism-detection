@@ -1,7 +1,6 @@
-from pydantic import ConfigDict, BaseModel, Field, EmailStr
+from pydantic import ConfigDict, BaseModel, Field
 from typing_extensions import Annotated, Optional
 from pydantic.functional_validators import BeforeValidator
-from pydantic_models import user_schema
 PyObjectId = Annotated[str, BeforeValidator(str)]
 
 

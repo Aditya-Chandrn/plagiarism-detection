@@ -1,12 +1,11 @@
-import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict
 from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
 from database import user_collection
-from pydantic_models import user_schema
+from pydantic_models import user_schema, auth_token_schemas
 import bcrypt
-from jose import JWTError, jwt
-from jose.exceptions import ExpiredSignatureError
+from jose import  jwt
 from dotenv import dotenv_values
 
 config = dotenv_values(".env")
@@ -14,10 +13,12 @@ config = dotenv_values(".env")
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-def create_access_token(data: Dict[str, Any]) -> str:
-    encoded_jwt = jwt.encode(data, str(config["SECRET_KEY"]), algorithm=config["ALGORITHM"])
-    return encoded_jwt
-
+def create_auth_token(data: Dict[str, Any]) -> str:
+    data_copy = data.copy()
+    expire = datetime.now() + timedelta(minutes=int(config["JWT_EXPIRY"]))
+    data_copy.update({"exp": expire})
+    token = jwt.encode(data_copy, str(config["SECRET_KEY"]), algorithm=config["ALGORITHM"])
+    return token
 
 
 @router.post("/signup", response_model=user_schema.User, status_code=status.HTTP_201_CREATED)
@@ -40,10 +41,10 @@ async def register_user(user: user_schema.UserBase):
       db_user = await user_collection.find_one(
             {"_id": new_user.inserted_id}
       )
-      return db_user
+      return user_schema.User.model_validate(db_user)
       
 
-@router.post("/login", response_model=user_schema.User, status_code=status.HTTP_200_OK)
+@router.post("/login", status_code=status.HTTP_200_OK)
 async def login_user(user: user_schema.UserLogin):
       db_user = await user_collection.find_one({"email": user.email})
 
@@ -60,5 +61,10 @@ async def login_user(user: user_schema.UserLogin):
                   content={"detail": "Incorrect Password"}
             )
     
-      # ------- CREATE AN ACCESS TOKEN  -------
-      return db_user
+      data = {
+           "name" : db_user["name"],
+           "email" : db_user["email"],
+           "user_id": str(db_user["_id"]),
+      }
+      auth_token = create_auth_token(data)
+      return auth_token_schemas.AuthToken(auth_token = auth_token)
