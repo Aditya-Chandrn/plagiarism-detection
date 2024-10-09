@@ -2,7 +2,7 @@
 .env
 
 # Cache
-**/pycache
+**/__pycache__
 
 # Virtual Env
 /server_venv
