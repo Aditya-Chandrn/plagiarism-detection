@@ -10,7 +10,7 @@ from dotenv import dotenv_values
 
 config = dotenv_values(".env")
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(prefix="/user", tags=["user"])
 
 
 def create_auth_token(data: Dict[str, Any]) -> str:

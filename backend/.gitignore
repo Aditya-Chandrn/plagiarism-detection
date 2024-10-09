@@ -6,3 +6,5 @@
 
 # Virtual Env
 /server_venv
+
+/documents/*
