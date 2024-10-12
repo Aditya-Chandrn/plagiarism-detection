@@ -4,7 +4,9 @@ from jose.exceptions import ExpiredSignatureError
 from dotenv import dotenv_values
 import fitz 
 from docx import Document as DocxDocument
- 
+import subprocess
+import os
+
 config = dotenv_values(".env")
 
 async def verify_token(request: Request):
@@ -35,9 +37,36 @@ async def verify_token(request: Request):
 
 
 async def convert_pdf_to_md(file_path: str) -> str:
-    doc = fitz.open(file_path)
-    markdown_content = "".join([page.get_text() + "\n" for page in doc])
-    return markdown_content
+      output_folder = os.path.dirname(file_path)
+    
+      try:
+            result = subprocess.run(
+                  ['marker_single', file_path, output_folder], 
+                  text=True,
+                  check=True,
+                  stdout=subprocess.PIPE,   
+                  shell=True
+            )
+      except subprocess.CalledProcessError as e:
+            print(f"Error: {e.stderr}")
+            return ""
+
+
+      pdf_folder = os.path.splitext(os.path.basename(file_path))[0]
+      pdf_output_dir = os.path.join(output_folder, pdf_folder)
+
+      if not os.path.exists(pdf_output_dir):
+            raise FileNotFoundError(f"Output folder {pdf_output_dir} not found.")
+
+      # Get the markdown file in that folder
+      md_file = [f for f in os.listdir(pdf_output_dir) if f.endswith(".md")]
+      
+      if not md_file:
+            raise FileNotFoundError("Markdown file not found in the output directory.")
+      
+      md_file_path = os.path.join(pdf_output_dir, md_file[0])
+      
+      return md_file_path
 
 
 async def convert_docx_to_md(file_path: str) -> str:

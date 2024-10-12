@@ -6,7 +6,7 @@ from .utils import verify_token, convert_to_md
 import random
 from concurrent.futures import ProcessPoolExecutor
 import asyncio
-
+import shutil
 config = dotenv_values(".env")
 
 router = APIRouter(prefix="/document", tags=["document"])
@@ -22,14 +22,16 @@ executor = ProcessPoolExecutor()
 
 def detect_similarity() -> float:
     for i in range(1, 100):
-        print(f"i: {i}")
+        # print(f"i: {i}")
+        pass
     
     return random.random()
 
 
 def detect_ai_generated_content() -> float:
     for j in range(1, 100):
-        print(f"j: {j}")
+        # print(f"j: {j}")
+        pass
 
     return random.random()
 
@@ -51,12 +53,11 @@ async def upload_document(token: str = Depends(verify_token), document: UploadFi
 
     # Convert the file to Markdown
     try:
-        markdown_content = await convert_to_md(file_path)
+        md_file_path = await convert_to_md(file_path)
 
-        # Save the converted Markdown to a .md file
-        md_file_path = os.path.splitext(file_path)[0] + ".md"
-        with open(md_file_path, "w", encoding="utf-8") as md_file:
-            md_file.write(markdown_content)
+        # Move the markdown file to a standardized location if needed
+        standardized_md_path = os.path.join(DOCUMENTS_FOLDER, os.path.basename(md_file_path))
+        shutil.move(md_file_path, standardized_md_path)
     except ValueError as e:
         return JSONResponse(content={"error": str(e)}, status_code=400)
     except Exception as e:
@@ -78,7 +79,7 @@ async def upload_document(token: str = Depends(verify_token), document: UploadFi
     return JSONResponse(content={
         "filename": document.filename,
         "filepath": file_path,
-        "markdown_filepath": md_file_path,
+        "markdown_filepath": standardized_md_path,
         "message": "File converted successfully.",
         "ai_gen_score": ai_score_ans,
         "text_similarity_score": text_similarity_ans
