@@ -40,16 +40,19 @@ export default function ReportDetailPage() {
         Report Detail: {reportData.documentName}
       </h1>
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="h-[calc(100vh-6rem)] overflow-hidden">
-          <CardHeader>
+        {/* <Card className="h-[calc(100vh-6rem)] overflow-hidden"> */}
+        {/* <CardHeader>
             <CardTitle>Document Content</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[calc(100vh-10rem)]">
-              <div className="whitespace-pre-wrap">{reportData.content}</div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
+          <CardContent> */}
+        <embed
+          src="http://localhost:8000/document/classification-of-human-and-ai-generated-texts-investigating-1q5bto7ajj.pdf"
+          frameborder="0"
+          width="100%"
+          height="800px"
+        ></embed>
+        {/* </CardContent>
+        </Card> */}
 
         <Card className="h-[calc(100vh-6rem)] overflow-hidden">
           <CardHeader>

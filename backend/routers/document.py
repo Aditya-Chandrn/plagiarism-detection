@@ -1,7 +1,7 @@
-from fastapi import APIRouter, File, UploadFile, Depends
+from fastapi import APIRouter, File, UploadFile, Depends, HTTPException
 from dotenv import dotenv_values
 import os
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from .utils import verify_token, convert_to_md
 import random
 from concurrent.futures import ProcessPoolExecutor
@@ -84,3 +84,17 @@ async def upload_document(token: str = Depends(verify_token), document: UploadFi
         "ai_gen_score": ai_score_ans,
         "text_similarity_score": text_similarity_ans
     })
+
+@router.get("/{filename}")
+async def get_document(filename: str):    
+    ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    DOCUMENTS_DIR = os.path.join(ROOT_DIR, "documents")
+
+    file_path = os.path.join(DOCUMENTS_DIR, filename)
+
+
+    print(f"Here {file_path}")
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    else:
+        raise HTTPException(status_code=404, detail="File not found")
