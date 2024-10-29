@@ -2,7 +2,6 @@ from fastapi import HTTPException, Request, status
 from jose import JWTError, jwt
 from jose.exceptions import ExpiredSignatureError
 from dotenv import dotenv_values
-import fitz 
 from docx import Document as DocxDocument
 import subprocess
 import os
@@ -45,8 +44,9 @@ async def convert_pdf_to_md(file_path: str) -> str:
                   text=True,
                   check=True,
                   stdout=subprocess.PIPE,   
-                  shell=True
+                  shell=False
             )
+            
       except subprocess.CalledProcessError as e:
             print(f"Error: {e.stderr}")
             return ""

@@ -7,6 +7,8 @@ import random
 from concurrent.futures import ProcessPoolExecutor
 import asyncio
 import shutil
+import aiofiles
+
 config = dotenv_values(".env")
 
 router = APIRouter(prefix="/document", tags=["document"])
@@ -19,7 +21,6 @@ os.makedirs(DOCUMENTS_FOLDER, exist_ok=True)
 # Create a global executor for CPU-bound tasks
 executor = ProcessPoolExecutor()
 
-
 def detect_similarity() -> float:
     for i in range(1, 100):
         # print(f"i: {i}")
@@ -27,14 +28,12 @@ def detect_similarity() -> float:
     
     return random.random()
 
-
 def detect_ai_generated_content() -> float:
     for j in range(1, 100):
         # print(f"j: {j}")
         pass
 
     return random.random()
-
 
 @router.post("/upload")
 async def upload_document(token: str = Depends(verify_token), document: UploadFile = File(...)):
@@ -46,8 +45,9 @@ async def upload_document(token: str = Depends(verify_token), document: UploadFi
     # Save the uploaded file to the server
     try:
         content = await document.read()
-        with open(file_path, "wb") as f:
-            f.write(content)
+        async with aiofiles.open(file_path, "wb") as f:
+            await f.write(content)
+
     except Exception as e:
         return JSONResponse(content={"error": f"Failed to save file: {str(e)}"}, status_code=500)
 

@@ -1,251 +1,253 @@
-import re
-import nltk
-import PyPDF2
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
-from nltk.corpus import wordnet
-from sentence_transformers import SentenceTransformer
+# import re
+# import nltk
+# from nltk.corpus import stopwords
+# from nltk.stem import WordNetLemmatizer
+# from sklearn.feature_extraction.text import TfidfVectorizer
+# from sklearn.metrics.pairwise import cosine_similarity
+# from sentence_transformers import SentenceTransformer
+# from transformers import LongformerModel, LongformerTokenizer
+# import torch
 
-class ResearchPaperDetector:
-    def __init__(self, bert_weight=0.6):
-        """
-        Initializes the detector with a combination of BERT embeddings and TF-IDF.
-        The bert_weight parameter determines the importance of BERT embeddings in the similarity score.
-        """
-        # Set the BERT and TF-IDF weighting
-        self.bert_weight = bert_weight
-        self.tfidf_weight = 1 - bert_weight
+# class GetPapers:
+#     def load_papers(self, paper1_path, paper2_path):
         
-        # Vectorizers for different sections of the research paper (TF-IDF)
-        self.section_vectorizers = {
-            'abstract': TfidfVectorizer(ngram_range=(1, 3)),
-            'introduction': TfidfVectorizer(ngram_range=(1, 3)),
-            'methodology': TfidfVectorizer(ngram_range=(1, 3)),
-            'results': TfidfVectorizer(ngram_range=(1, 3)),
-            'discussion': TfidfVectorizer(ngram_range=(1, 3))
-        }
-        
-        # Initialize the BERT model for sentence embeddings
-        self.bert_model = SentenceTransformer('all-MiniLM-L6-v2')
-        
-        # Load stopwords and lemmatizer for text preprocessing
-        self.stop_words = set(stopwords.words('english'))
-        self.lemmatizer = WordNetLemmatizer()
-        
-        # Regular expressions for detecting and removing citation patterns
-        self.citation_patterns = [
-            r'\(\w+,?\s+\d{4}\)',  # (Author, 2020)
-            r'\[[\d,\s-]+\]',      # [1], [1,2,3]
-            r'\d+\.\s+references', # For removing reference lists
-            r'(?<=\])\d{1,3}(?=[,\s])', # Numbered citations
-        ]
-
-    def extract_paper_sections(self, text):
-        """
-        Extracts the different sections (abstract, introduction, etc.) of a research paper.
-        Returns a dictionary with sections and their content.
-        """
-        sections = {
-            'abstract': '',
-            'introduction': '',
-            'methodology': '',
-            'results': '',
-            'discussion': '',
-            'full_text': text  # Keep the entire paper text
-        }
-        
-        # Patterns to detect common section headers
-        section_patterns = {
-            'abstract': r'abstract.*?(?=introduction|\n\n)',
-            'introduction': r'introduction.*?(?=methodology|methods|materials and methods|\n\n)',
-            'methodology': r'(methodology|methods|materials and methods).*?(?=results|\n\n)',
-            'results': r'results.*?(?=discussion|\n\n)',
-            'discussion': r'discussion.*?(?=conclusion|references|\n\n)'
-        }
-        
-        # Search for each section using regex and store in sections dictionary
-        for section, pattern in section_patterns.items():
-            match = re.search(pattern, text.lower(), re.DOTALL | re.IGNORECASE)
-            if match:
-                sections[section] = match.group(0)
-        
-        return sections
-
-    def preprocess_academic_text(self, text):
-        """
-        Preprocesses academic text by removing citations and common phrases,
-        tokenizing, lemmatizing, and removing stopwords.
-        """
-        # Remove citations using predefined citation patterns
-        for pattern in self.citation_patterns:
-            text = re.sub(pattern, '', text)
-        
-        # Remove common academic phrases that don’t contribute to similarity detection
-        common_phrases = [
-            'in this paper', 'in this study', 'in this research',
-            'the results show', 'the findings indicate',
-            'according to the results', 'based on the findings'
-        ]
-        for phrase in common_phrases:
-            text = text.replace(phrase.lower(), '')
-        
-        # Tokenize the text and apply POS tagging
-        tokens = nltk.word_tokenize(text)
-        tagged_tokens = nltk.pos_tag(tokens)
-        
-        # Lemmatize tokens and remove stopwords
-        processed_tokens = [
-            self.lemmatizer.lemmatize(word, self.get_wordnet_pos(tag))
-            for word, tag in tagged_tokens
-            if word.lower() not in self.stop_words and word.isalpha()
-        ]
-        
-        return ' '.join(processed_tokens)
-
-    def get_wordnet_pos(self, nltk_tag):
-        """
-        Maps NLTK part-of-speech tags to WordNet format for lemmatization.
-        """
-        tag_dict = {"J": wordnet.ADJ, "N": wordnet.NOUN, 
-                   "V": wordnet.VERB, "R": wordnet.ADV}
-        return tag_dict.get(nltk_tag[0].upper(), wordnet.NOUN)
-
-    def calculate_section_similarity(self, section1, section2, section_name):
-        """
-        Calculates similarity between two sections using a combination of TF-IDF and BERT embeddings.
-        """
-        if not section1 or not section2:
-            return 0.0
-        
-        # Calculate TF-IDF similarity for the section
-        vectorizer = self.section_vectorizers[section_name]
-        tfidf_matrix = vectorizer.fit_transform([section1, section2])
-        tfidf_similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-        
-        # Calculate BERT similarity for the section
-        bert_embeddings = self.bert_model.encode([section1, section2])
-        bert_similarity = cosine_similarity([bert_embeddings[0]], [bert_embeddings[1]])[0][0]
-        
-        # Return a weighted combination of TF-IDF and BERT similarities
-        return (self.bert_weight * bert_similarity + 
-                self.tfidf_weight * tfidf_similarity)
-
-    def analyze_paper_similarity(self, pdf1_path, pdf2_path):
-        """
-        Compares two research papers by extracting their sections and calculating similarity.
-        Returns an analysis report with section-wise and overall similarity scores.
-        """
-        # Extract text from the two PDF files
-        paper1 = self.extract_text_from_pdf(pdf1_path)
-        paper2 = self.extract_text_from_pdf(pdf2_path)
-        
-        # Extract sections from each paper
-        sections1 = self.extract_paper_sections(paper1)
-        sections2 = self.extract_paper_sections(paper2)
-        
-        # Section-wise similarity scores
-        section_scores = {}
-        section_weights = {
-            'abstract': 0.15,
-            'introduction': 0.2,
-            'methodology': 0.25,
-            'results': 0.25,
-            'discussion': 0.15
-        }
-        
-        # Calculate similarity for each section
-        for section in sections1.keys():
-            if section != 'full_text':
-                processed_section1 = self.preprocess_academic_text(sections1[section])
-                processed_section2 = self.preprocess_academic_text(sections2[section])
-                section_scores[section] = self.calculate_section_similarity(
-                    processed_section1, processed_section2, section
-                )
-        
-        # Calculate weighted overall similarity
-        weighted_similarity = sum(
-            section_scores[section] * section_weights[section]
-            for section in section_scores.keys()
-        )
-        
-        # Generate a detailed analysis report
-        return self.generate_analysis_report(section_scores, weighted_similarity)
-
-    def generate_analysis_report(self, section_scores, weighted_similarity):
-        """
-        Generates a detailed analysis report based on section scores and overall similarity.
-        """
-        report = {
-            'overall_similarity': weighted_similarity,
-            'section_scores': section_scores,
-            'interpretation': self.interpret_academic_similarity(weighted_similarity),
-            'risk_level': self.assess_risk_level(weighted_similarity, section_scores)
-        }
-        
-        return report
-
-    def interpret_academic_similarity(self, similarity):
-        """
-        Provides an interpretation of the overall similarity score.
-        """
-        if similarity >= 0.8:
-            return ("HIGH SIMILARITY - Significant overlap detected. "
-                   "Thorough review recommended for potential duplication.")
-        elif similarity >= 0.6:
-            return ("MODERATE SIMILARITY - Some overlapping content. "
-                   "May indicate similar methodology or common background material.")
-        else:
-            return ("LOW SIMILARITY - Likely original research. "
-                   "Common academic phrases may account for minor similarities.")
-
-    def assess_risk_level(self, overall_similarity, section_scores):
-        """
-        Assesses the risk level of potential plagiarism based on section-wise and overall similarity.
-        """
-        risk_factors = []
-        
-        # High similarity in key sections increases risk
-        if section_scores.get('methodology', 0) > 0.8:
-            risk_factors.append("High methodology similarity")
-        if section_scores.get('results', 0) > 0.7:
-            risk_factors.append("High results similarity")
+#         try:
+#             with open(paper1_path, "r", encoding='utf-8') as f1:
+#                 paper1_content = f1.read()
+#             with open(paper2_path, "r", encoding='utf-8') as f2:
+#                 paper2_content = f2.read()
             
-        # Final risk assessment based on overall similarity and risk factors
-        if overall_similarity > 0.8 or len(risk_factors) >= 2:
-            return "High Risk"
-        elif overall_similarity > 0.6 or len(risk_factors) == 1:
-            return "Medium Risk"
-        return "Low Risk"
+#             return paper1_content, paper2_content
+        
+#         except Exception as e:
+#             print(f'Error reading files: {e}')
+#             return None, None
+        
+# class Preprocessor:
+#     def __init__(self):
+#         self.stop_words = set(stopwords.words('english'))
+#         self.word_lemmatizer = WordNetLemmatizer()
+    
+#     def extract_sections(self, paper_content):
+#         sections = {
+#             'abstract': '',
+#             'introduction': '',
+#             'methodology': '',
+#             'results': '',
+#             'discussion': '',
+#             'conclusion': '',
+#             'full_text': paper_content
+#         }
+        
+#         section_patterns = {
+#             'abstract': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:abstract).*?(?=\n#+|$)',
+#             'introduction': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:introduction|background).*?(?=\n#+|$)',
+#             'methodology': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:methodology|methods|materials and methods).*?(?=\n#+|$)',
+#             'results': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:results|findings).*?(?=\n#+|$)',
+#             'discussion': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:discussion).*?(?=\n#+|$)',
+#             'conclusion': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:conclusion|final thoughts).*?(?=\n#+|$)'
+#         }
+        
+#         for section, pattern in section_patterns.items():
+#             match = re.search(pattern, paper_content, re.DOTALL)
+#             if match:
+#                 content = re.sub(r'^#+\s*\w+\s*', '', match.group(0), flags=re.IGNORECASE)
+#                 sections[section] = content.strip()
+                
+#         return sections
+    
+#     def preprocess_text(self, text, use_lemmatization=True):
+#         if not text:
+#             return ''
+        
+#         try:
+#             text = re.sub(r'[^a-zA-Z0-9\s.,]', ' ', text)
+#             text = text.lower()
+            
+#             tokens = nltk.word_tokenize(text)
+#             filtered_tokens = [
+#                 self.word_lemmatizer.lemmatize(token) if use_lemmatization else token
+#                 for token in tokens if token not in self.stop_words
+#             ]
+            
+#             return ' '.join(filtered_tokens)
+            
+#         except Exception as e:
+#             print(f"Error in preprocessing: {str(e)}")
+#             return ''
+   
+# class SimilarityCalculator:
+#     def __init__(self, bert_model='all-MiniLM-L6-v2', longformer_model='allenai/longformer-base-4096'):
+#         self.bert_model = SentenceTransformer(bert_model)
+#         self.longformer_calculator = LongformerSimilarityCalculator(longformer_model)
+#         self.bert_max_tokens = 512  # BERT's max token limit
+#         self.tokenizer = LongformerTokenizer.from_pretrained(longformer_model)
+#         self.tfidf_vectorizer = TfidfVectorizer(ngram_range=(1,1))
 
-    def extract_text_from_pdf(self, file_path):
-        """
-        Extracts text from a PDF file.
-        """
-        text = []
-        with open(file_path, 'rb') as file:
-            pdf_reader = PyPDF2.PdfReader(file)
-            for page in pdf_reader.pages:
-                text.append(page.extract_text())
-        return ' '.join(text)
+#     def calculate_tfidf_similarity(self, text1, text2):
+#         if not text1 or not text2:
+#             return 0.0
+#         try:
+#             tfidf_matrix = self.tfidf_vectorizer.fit_transform([text1, text2])
+#             return cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
+#         except Exception as e:
+#             print(f"Error in TF-IDF calculation: {str(e)}")
+#             return 0.0
 
-# Example usage
-if __name__ == "__main__":
-    detector = ResearchPaperDetector(bert_weight=0.6)
+#     def calculate_bert_similarity(self, text1, text2):
+#         try:
+#             embeddings = self.bert_model.encode([text1, text2])
+#             return cosine_similarity([embeddings[0]], [embeddings[1]])[0][0]
+#         except Exception as e:
+#             print(f"Error in BERT calculation: {str(e)}")
+#             return 0.0
+
+#     def calculate_similarity(self, text1, text2):
+#         # Check the token count of both texts
+#         tokens1 = self.tokenizer.encode(text1)
+#         tokens2 = self.tokenizer.encode(text2)
+        
+#         # If either text exceeds BERT's limit, use Longformer
+#         if len(tokens1) > self.bert_max_tokens or len(tokens2) > self.bert_max_tokens:
+#             print(f"Using Longformer for comparison (token counts: {len(tokens1)}, {len(tokens2)})")
+#             return self.longformer_calculator.calculate_similarity(text1, text2)
+#         else:
+#             print(f"Using BERT for comparison (token counts: {len(tokens1)}, {len(tokens2)})")
+#             return self.calculate_bert_similarity(text1, text2)
     
-    # Compare papers
-    paper1_path = "documents/research-paper-1.pdf"
-    paper2_path = "documents/research-paper-2.pdf"
+# class ResearchPaperSimilarityDetector:
+#     def __init__(self, tfidf_weight=0.3, transformer_weight=0.7):
+#         self.similarity_calculator = SimilarityCalculator()
+#         self.tfidf_weight = tfidf_weight
+#         self.transformer_weight = transformer_weight
+        
+#     def combined_similarity(self, text1, text2):
+#         tfidf_score = self.similarity_calculator.calculate_tfidf_similarity(text1, text2)
+        
+#         try:
+#             transformer_score = self.similarity_calculator.calculate_similarity(text1, text2)
+#             model_used = self.get_model_used(text1, text2)
+#         except Exception as e:
+#             print(f"Error in transformer calculation: {str(e)}. Falling back to TF-IDF only.")
+#             transformer_score = 0
+#             model_used = "Fallback to TF-IDF"
+        
+#         if transformer_score == 0 and model_used != "Fallback to TF-IDF":
+#             print(f"Transformer score is 0. Attempting to use the other transformer model.")
+#             try:
+#                 if model_used == "BERT":
+#                     transformer_score = self.similarity_calculator.longformer_calculator.calculate_similarity(text1, text2)
+#                     model_used = "Longformer (Fallback)"
+#                 else:
+#                     transformer_score = self.similarity_calculator.calculate_bert_similarity(text1, text2)
+#                     model_used = "BERT (Fallback)"
+#             except Exception as e:
+#                 print(f"Error in fallback transformer calculation: {str(e)}. Using TF-IDF only.")
+#                 model_used = "Fallback to TF-IDF"
+        
+#         if transformer_score == 0:
+#             combined_score = tfidf_score
+#         else:
+#             combined_score = (self.tfidf_weight * tfidf_score) + (self.transformer_weight * transformer_score)
+        
+#         return combined_score, {
+#             "tfidf": tfidf_score,
+#             "transformer": transformer_score
+#         }, model_used
     
-    results = detector.analyze_paper_similarity(paper1_path, paper2_path)
+#     def get_model_used(self, text1, text2):
+#         tokens1 = self.similarity_calculator.tokenizer.encode(text1)
+#         tokens2 = self.similarity_calculator.tokenizer.encode(text2)
+        
+#         if len(tokens1) > self.similarity_calculator.bert_max_tokens or len(tokens2) > self.similarity_calculator.bert_max_tokens:
+#             return "Longformer"
+#         else:
+#             return "BERT"
     
-    # Print detailed results
-    print("\nResearch Paper Similarity Analysis:")
-    print(f"\nOverall Similarity Score: {results['overall_similarity']:.4f}")
-    print(f"Risk Level: {results['risk_level']}")
-    print(f"\nInterpretation: {results['interpretation']}")
+#     def auto_combined_similarity(self, text1, text2):
+#         tokens1 = self.similarity_calculator.tokenizer.encode(text1)
+#         tokens2 = self.similarity_calculator.tokenizer.encode(text2)
+        
+#         if len(tokens1) > self.similarity_calculator.bert_max_tokens or len(tokens2) > self.similarity_calculator.bert_max_tokens:
+#             print(f"Using Longformer for comparison (token counts: {len(tokens1)}, {len(tokens2)})")
+#             return self.combined_similarity_longformer(text1, text2)
+#         else:
+#             print(f"Using BERT for comparison (token counts: {len(tokens1)}, {len(tokens2)})")
+#             return self.combined_similarity_bert(text1, text2)
+
+# class LongformerSimilarityCalculator:
+#     def __init__(self, model_name='allenai/longformer-base-4096'):
+#         self.tokenizer = LongformerTokenizer.from_pretrained(model_name)
+#         self.model = LongformerModel.from_pretrained(model_name)
+#         self.max_length = self.model.config.max_position_embeddings
+
+#     def calculate_similarity(self, text1, text2):
+#         try:
+#             # Tokenize and truncate
+#             inputs1 = self.tokenizer(text1, return_tensors='pt', max_length=self.max_length, truncation=True)
+#             inputs2 = self.tokenizer(text2, return_tensors='pt', max_length=self.max_length, truncation=True)
+            
+#             with torch.no_grad():
+#                 outputs1 = self.model(**inputs1)
+#                 outputs2 = self.model(**inputs2)
+            
+#             # Use mean pooling instead of just the [CLS] token
+#             mask1 = inputs1['attention_mask'].unsqueeze(-1).expand(outputs1.last_hidden_state.size()).float()
+#             mask2 = inputs2['attention_mask'].unsqueeze(-1).expand(outputs2.last_hidden_state.size()).float()
+            
+#             sum_embeddings1 = torch.sum(outputs1.last_hidden_state * mask1, 1)
+#             sum_embeddings2 = torch.sum(outputs2.last_hidden_state * mask2, 1)
+            
+#             sum_mask1 = torch.clamp(mask1.sum(1), min=1e-9)
+#             sum_mask2 = torch.clamp(mask2.sum(1), min=1e-9)
+            
+#             embedding1 = sum_embeddings1 / sum_mask1
+#             embedding2 = sum_embeddings2 / sum_mask2
+            
+#             similarity = cosine_similarity(embedding1.numpy(), embedding2.numpy())[0][0]
+#             return similarity
+#         except Exception as e:
+#             print(f"Error in Longformer calculation: {str(e)}")
+#             return 0.0
+
+# def main():
+#     paper1_path = 'C:/College/College Work/plagiarism-detection/backend/documents/ai content similarity.md'
+#     paper2_path = 'C:/College/College Work/plagiarism-detection/backend/documents/ai content similarity-2.md'
     
-    print("\nSection-wise Similarity Scores:")
-    for section, score in results['section_scores'].items():
-        print(f"{section.title()}: {score:.4f}")
+#     get_papers = GetPapers()
+#     paper1, paper2 = get_papers.load_papers(paper1_path, paper2_path)
+    
+#     if not paper1 or not paper2:
+#         print("Error loading papers")
+#         return
+    
+#     preprocessor = Preprocessor()
+#     sections_paper1 = preprocessor.extract_sections(paper1)
+#     sections_paper2 = preprocessor.extract_sections(paper2)
+    
+#     if not sections_paper1 or not sections_paper2:
+#         print("Error extracting sections")
+#         return
+    
+#     similarity_detector = ResearchPaperSimilarityDetector(tfidf_weight=0.3, transformer_weight=0.7)
+    
+#     print('Similarity Scores by Section:')
+#     print('-' * 30)
+    
+#     for section in sections_paper1.keys():
+#         text1 = preprocessor.preprocess_text(sections_paper1[section])
+#         text2 = preprocessor.preprocess_text(sections_paper2[section])
+        
+#         if text1 and text2:  # Only process if both texts have content
+#             combined_score, individual_scores, model_used = similarity_detector.combined_similarity(text1, text2)
+            
+#             print(f"{section.capitalize():<15} : Combined Score: {combined_score:.4f}")
+#             print(f"Model used: {model_used}")
+#             print(f"Individual Scores: TF-IDF: {individual_scores['tfidf']:.4f}, "
+#                   f"Transformer ({model_used}): {individual_scores['transformer']:.4f}")
+#         else:
+#             print(f"{section.capitalize():<15} : No content available")
+#         print()  # Add a blank line for readability
+
+# if __name__ == "__main__":
+#     main()

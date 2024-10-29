@@ -10,5 +10,4 @@ if __name__ == "__main__":
     SERVER_HOST = getenv("SERVER_HOST")
     SERVER_PORT = int(getenv("SERVER_PORT"))
     DEV_ENV = bool(getenv("DEV_ENV"))
-    uvicorn.run("fastapi_server:app", host=SERVER_HOST,
-                port=SERVER_PORT, reload=DEV_ENV)
+    uvicorn.run("fastapi_server:app", host=SERVER_HOST, port=SERVER_PORT, reload=DEV_ENV)
