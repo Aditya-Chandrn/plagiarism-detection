@@ -46,7 +46,7 @@ export default function ReportDetailPage() {
           </CardHeader>
           <CardContent> */}
         <embed
-          src="http://localhost:8000/document/classification-of-human-and-ai-generated-texts-investigating-1q5bto7ajj.pdf"
+          src="http://localhost:8000/document/classification-of-human-and-ai-generated-texts-investigating-1q5bto7ajj.md"
           frameborder="0"
           width="100%"
           height="800px"
@@ -128,17 +128,6 @@ export default function ReportDetailPage() {
                       </li>
                     ))}
                   </ul>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-lg mb-3">
-                    AI-Generated Content Analysis
-                  </h3>
-                  <p className="text-sm text-gray-700">
-                    Sections with high probability of AI generation are
-                    highlighted in the document view. These sections require
-                    careful review to ensure academic integrity.
-                  </p>
                 </div>
               </div>
             </ScrollArea>

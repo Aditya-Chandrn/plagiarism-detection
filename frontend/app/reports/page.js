@@ -6,15 +6,24 @@ import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
+  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-import { ChevronDown, ChevronUp, Search } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  AlertTriangle,
+  Bot,
+  Eye,
+  Download,
+  Search,
+} from "lucide-react";
 import ReportPreview from "@/components/ReportPreview";
+import UploadDocument from "@/components/UploadDocument";
 
-const reports = [
+const initialReports = [
   {
     id: 1,
     title: "Research_Paper_Final.pdf",
@@ -52,7 +61,8 @@ const reports = [
   },
 ];
 
-export default function ReportsPage() {
+export default function Component() {
+  const [reports, setReports] = useState(initialReports);
   const [sortConfig, setSortConfig] = useState({
     key: "date",
     direction: "desc",
@@ -89,91 +99,117 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
-      <h1 className="text-3xl font-bold">Plagiarism Detection Reports</h1>
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div className="relative w-full sm:w-64">
-          <Search
-            className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400"
-            size={20}
-          />
+    <div className="max-w-[1200px] mx-auto px-6 py-8">
+      <h1 className="text-3xl font-bold mb-8">Plagiarism Detection Reports</h1>
+      <div className="flex justify-between items-center mb-8">
+        <div className="relative w-[400px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             type="text"
             placeholder="Search reports..."
-            className="pl-10"
+            className="pl-10 h-11 text-base"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+        <UploadDocument />
       </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[300px]">
-              <Button variant="ghost" onClick={() => handleSort("title")}>
-                Document Name
-                {sortConfig.key === "title" && (
-                  <span>
-                    {sortConfig.direction === "asc" ? (
-                      <ChevronUp size={16} />
-                    ) : (
-                      <ChevronDown size={16} />
-                    )}
-                  </span>
-                )}
-              </Button>
-            </TableHead>
-            <TableHead>
-              <Button variant="ghost" onClick={() => handleSort("date")}>
-                Date
-                {sortConfig.key === "date" && (
-                  <span>
-                    {sortConfig.direction === "asc" ? (
-                      <ChevronUp size={16} />
-                    ) : (
-                      <ChevronDown size={16} />
-                    )}
-                  </span>
-                )}
-              </Button>
-            </TableHead>
-            <TableHead>
-              <Button variant="ghost" onClick={() => handleSort("similarity")}>
-                Plagiarism
-                {sortConfig.key === "similarity" && (
-                  <span>
-                    {sortConfig.direction === "asc" ? (
-                      <ChevronUp size={16} />
-                    ) : (
-                      <ChevronDown size={16} />
-                    )}
-                  </span>
-                )}
-              </Button>
-            </TableHead>
-            <TableHead>
-              <Button variant="ghost" onClick={() => handleSort("aiContent")}>
-                AI Content
-                {sortConfig.key === "aiContent" && (
-                  <span>
-                    {sortConfig.direction === "asc" ? (
-                      <ChevronUp size={16} />
-                    ) : (
-                      <ChevronDown size={16} />
-                    )}
-                  </span>
-                )}
-              </Button>
-            </TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredReports.map((report) => (
-            <ReportPreview report={report} />
-          ))}
-        </TableBody>
-      </Table>
+      <div className="rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-[300px]">Document Name</TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("date")}
+                  className="flex items-center gap-1"
+                >
+                  Date
+                  {sortConfig.key === "date" && (
+                    <span>
+                      {sortConfig.direction === "asc" ? (
+                        <ChevronUp size={16} />
+                      ) : (
+                        <ChevronDown size={16} />
+                      )}
+                    </span>
+                  )}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("similarity")}
+                  className="flex items-center gap-1"
+                >
+                  Plagiarism
+                  {sortConfig.key === "similarity" && (
+                    <span>
+                      {sortConfig.direction === "asc" ? (
+                        <ChevronUp size={16} />
+                      ) : (
+                        <ChevronDown size={16} />
+                      )}
+                    </span>
+                  )}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleSort("ai-content")}
+                  className="flex items-center gap-1"
+                >
+                  AI Content
+                  {sortConfig.key === "ai-content" && (
+                    <span>
+                      {sortConfig.direction === "asc" ? (
+                        <ChevronUp size={16} />
+                      ) : (
+                        <ChevronDown size={16} />
+                      )}
+                    </span>
+                  )}
+                </Button>
+              </TableHead>
+              <TableHead className="text-center">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredReports.map((report) => (
+              <TableRow key={report.id}>
+                <TableCell className="font-medium">{report.title}</TableCell>
+                <TableCell>{report.date}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                    <span>{report.similarity}%</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Bot className="h-4 w-4 text-blue-500" />
+                    <span>{report.aiContent}%</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex justify-center gap-4">
+                    <Button variant="ghost" size="sm">
+                      <Eye className="h-4 w-4" />
+                      <span className="ml-2">View</span>
+                    </Button>
+                    <Button variant="ghost" size="sm">
+                      <Download className="h-4 w-4" />
+                      <span className="ml-2">Download</span>
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

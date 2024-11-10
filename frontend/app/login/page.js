@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import axios from "axios";
 import { Eye, EyeOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,6 +18,8 @@ export default function LoginPage() {
   });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+
+  const { toast } = useToast();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -41,23 +44,29 @@ export default function LoginPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (validateForm()) {
-      toast({
-        title: "You submitted the following values:",
-        description: (
-          <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-            <code className="text-white">
-              {JSON.stringify(formData, null, 2)}
-            </code>
-          </pre>
-        ),
-      });
-      // Here you would typically send the login request to your backend
-      console.log(formData);
-      // Redirect to dashboard after successful login
-      router.push("/dashboard");
+      try {
+        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+        const response = await axios.post(
+          `${BACKEND_URL}/user/login`,
+          formData,
+          { withCredentials: true }
+        );
+        console.log(response);
+
+        router.push("/reports");
+      } catch (error) {
+        console.log(error);
+
+        toast({
+          title: "Error",
+          description:
+            "Failed to login. Please check the entered details and try again.",
+          variant: "destructive",
+        });
+      }
     }
   };
 

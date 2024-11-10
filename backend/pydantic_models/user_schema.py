@@ -5,7 +5,8 @@ PyObjectId = Annotated[str, BeforeValidator(str)]
 
 
 class UserBase(BaseModel):
-      name: str 
+      fname: str 
+      lname: str 
       email: str
       password: str
 
@@ -17,7 +18,8 @@ class UserLogin(BaseModel):
 
 class User(BaseModel):
       id: Optional[PyObjectId] = Field(alias="_id", default=None)
-      name: str 
+      fname: str 
+      lname: str 
       email: str
       password: str
 

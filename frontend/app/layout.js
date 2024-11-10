@@ -1,4 +1,5 @@
 import "./globals.css";
+import { Toaster } from "@/components/ui/toaster";
 
 export const metadata = {
   title:
@@ -9,7 +10,10 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={`antialiased`}>{children}</body>
+      <body className={`antialiased`}>
+        {children}
+        <Toaster />
+      </body>
     </html>
   );
 }

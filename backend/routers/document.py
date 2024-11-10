@@ -1,12 +1,16 @@
+from datetime import datetime, timezone
 from fastapi import APIRouter, File, UploadFile, Depends, HTTPException
 from dotenv import dotenv_values
 import os
 from fastapi.responses import JSONResponse, FileResponse
-from .utils import verify_token, convert_to_md
-import random
+from .utils import verify_token, convert_to_md, detect_ai_generated_content, detect_similarity
 from concurrent.futures import ProcessPoolExecutor
 import asyncio
 import shutil
+from pydantic_models import document_schemas
+from database import document_collection
+from bson import ObjectId
+from fastapi.encoders import jsonable_encoder
 config = dotenv_values(".env")
 
 router = APIRouter(prefix="/document", tags=["document"])
@@ -20,50 +24,44 @@ os.makedirs(DOCUMENTS_FOLDER, exist_ok=True)
 executor = ProcessPoolExecutor()
 
 
-def detect_similarity() -> float:
-    for i in range(1, 100):
-        # print(f"i: {i}")
-        pass
-    
-    return random.random()
-
-
-def detect_ai_generated_content() -> float:
-    for j in range(1, 100):
-        # print(f"j: {j}")
-        pass
-
-    return random.random()
-
-
 @router.post("/upload")
-async def upload_document(token: str = Depends(verify_token), document: UploadFile = File(...)):
+async def upload_document(token_data: dict = Depends(verify_token), document: UploadFile = File(...)):
     """
     Endpoint to upload a document, convert it to Markdown, and compute AI-generated content and text similarity scores.
     """
-    file_path = os.path.join(DOCUMENTS_FOLDER, document.filename)
+    print(f"Received document: {document.filename}")
 
-    # Save the uploaded file to the server
     try:
+        file_path = os.path.join(DOCUMENTS_FOLDER, document.filename)
+        print(f"Saving file to: {file_path}")
+
+        # Save the uploaded file to the server
         content = await document.read()
         with open(file_path, "wb") as f:
             f.write(content)
+        print(f"File saved successfully: {file_path}")
+
     except Exception as e:
+        print(f"Error while saving file: {str(e)}")
         return JSONResponse(content={"error": f"Failed to save file: {str(e)}"}, status_code=500)
 
-    # Convert the file to Markdown
+    # Proceed with other operations
     try:
         md_file_path = await convert_to_md(file_path)
+        print(f"Converted to markdown: {md_file_path}")
 
-        # Move the markdown file to a standardized location if needed
+        # Move the markdown file to a standardized location
         standardized_md_path = os.path.join(DOCUMENTS_FOLDER, os.path.basename(md_file_path))
         shutil.move(md_file_path, standardized_md_path)
+        print(f"Markdown file moved to: {standardized_md_path}")
+
     except ValueError as e:
+        print(f"Markdown conversion error: {str(e)}")
         return JSONResponse(content={"error": str(e)}, status_code=400)
     except Exception as e:
+        print(f"Markdown conversion failed: {str(e)}")
         return JSONResponse(content={"error": f"Markdown conversion failed: {str(e)}"}, status_code=500)
 
-    # Run CPU-bound tasks using ProcessPoolExecutor
     try:
         ai_score_future = executor.submit(detect_ai_generated_content)
         text_similarity_future = executor.submit(detect_similarity)
@@ -73,17 +71,80 @@ async def upload_document(token: str = Depends(verify_token), document: UploadFi
             asyncio.to_thread(ai_score_future.result),
             asyncio.to_thread(text_similarity_future.result)
         )
+        print(f"AI Score: {ai_score_ans}, Text Similarity Score: {text_similarity_ans}")
+
     except Exception as e:
+        print(f"Error in AI/Similarity computation: {str(e)}")
         return JSONResponse(content={"error": f"Score computation failed: {str(e)}"}, status_code=500)
 
-    return JSONResponse(content={
-        "filename": document.filename,
-        "filepath": file_path,
-        "markdown_filepath": standardized_md_path,
-        "message": "File converted successfully.",
-        "ai_gen_score": ai_score_ans,
-        "text_similarity_score": text_similarity_ans
+    """
+    Create DB Record for the uploaded document.
+    """
+
+    ai_score_dict = [ai.dict() for ai in ai_score_ans]  
+    similarity_score_dict = [sim.dict() for sim in text_similarity_ans]  
+    user_id = token_data.get("user_id")
+
+    new_document = await document_collection.insert_one({
+        "name": document.filename,
+        "path": file_path,
+        "md_path": standardized_md_path,
+        "ai_content_result": ai_score_dict,
+        "similarity_result": similarity_score_dict,
+        "upload_date": datetime.now(timezone.utc),
+        "user_id": ObjectId(user_id)
     })
+
+
+    db_document = await document_collection.find_one(
+            {"_id": new_document.inserted_id}
+    )
+
+    return document_schemas.Document.model_validate(db_document)
+      
+
+@router.get("/")
+async def get_all_documents(token_data: dict = Depends(verify_token)):
+    try:
+        user_id = token_data.get("user_id")
+        
+        documents = []
+        cursor = document_collection.find({"user_id": ObjectId(user_id)})
+        
+        async for doc in cursor:
+            # doc["_id"] = str(doc["_id"])
+            # doc["user_id"] = str(doc["user_id"])
+                
+            documents.append(document_schemas.Document(**doc))
+        
+        return document_schemas.DocumentResponse(documents=documents)  
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving documents: {str(e)}"
+        )
+
+
+@router.get("/{document_id}")
+async def get_document(document_id: str, token_data: dict = Depends(verify_token)):    
+        
+    document = await document_collection.find_one({
+            "_id": ObjectId(document_id),
+    })
+
+    if not document:
+            raise HTTPException(
+                status_code=404,
+                detail="Document not found"
+            )
+            
+    document["_id"] = str(document["_id"])
+    document["user_id"] = str(document["user_id"])
+        
+    return document_schemas.Document(**document)
+
+
 
 @router.get("/{filename}")
 async def get_document(filename: str):    
@@ -92,8 +153,6 @@ async def get_document(filename: str):
 
     file_path = os.path.join(DOCUMENTS_DIR, filename)
 
-
-    print(f"Here {file_path}")
     if os.path.exists(file_path):
         return FileResponse(file_path)
     else:

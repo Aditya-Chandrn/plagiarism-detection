@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import HTTPException, Request, status
 from jose import JWTError, jwt
 from jose.exceptions import ExpiredSignatureError
@@ -6,15 +7,18 @@ import fitz
 from docx import Document as DocxDocument
 import subprocess
 import os
+import random
+
+from pydantic_models.document_schemas import AIGeneratedContent, Similarity, SimilaritySource
 
 config = dotenv_values(".env")
 
 async def verify_token(request: Request):
-      token = request.headers.get("Authorization")
+      token = request.cookies.get("plagiarism-access-token")
       if token: 
             token = token.replace("Bearer ", "")
             try:
-                  jwt.decode(token, config["SECRET_KEY"], algorithms=[config["ALGORITHM"]])
+                  payload = jwt.decode(token, config["SECRET_KEY"], algorithms=[config["ALGORITHM"]])
             except ExpiredSignatureError:
                   raise HTTPException(
                         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -27,13 +31,13 @@ async def verify_token(request: Request):
                   detail="Could not validate credentials",
                   headers={"WWW-Authenticate": "Bearer"},
                   )
+            return payload
       else:
             raise HTTPException(
                   status_code=status.HTTP_401_UNAUTHORIZED,
                   detail="Unauthorized",
                   headers={"WWW-Authenticate": "Bearer"},
             )
-      return token
 
 
 async def convert_pdf_to_md(file_path: str) -> str:
@@ -85,3 +89,17 @@ async def convert_to_md(file_path: str) -> str:
         return await convert_docx_to_md(file_path)
     else:
         raise ValueError(f"Unsupported file type: {file_path}")
+    
+    
+def detect_similarity() -> List[Similarity]:
+    return [
+        Similarity(source=SimilaritySource(name="Source1", url="http://example.com"), score=random.random()),
+        Similarity(source=SimilaritySource(name="Source2", url="http://example.com"), score=random.random())
+    ]
+
+def detect_ai_generated_content() -> List[AIGeneratedContent]:
+    # Return some dummy AI content data
+    return [
+        AIGeneratedContent(method_name="Method1", score=random.random()),
+        AIGeneratedContent(method_name="Method2", score=random.random())
+    ]
