@@ -18,7 +18,6 @@ class SimilaritySource(BaseModel):
     
 class Similarity(BaseModel):
       source: SimilaritySource
-      score: float
       
       
 class Document(BaseModel):
