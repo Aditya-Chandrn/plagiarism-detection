@@ -40,17 +40,19 @@ class Preprocessor:
         }
         
         section_patterns = {
-            'abstract': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:abstract).*?(?=\n#+|$)',
-            'introduction': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:introduction|background).*?(?=\n#+|$)',
-            'methodology': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:methodology|methods|materials and methods).*?(?=\n#+|$)',
-            'results': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:results|findings).*?(?=\n#+|$)',
-            'discussion': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:discussion).*?(?=\n#+|$)',
-            'conclusion': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:conclusion|final thoughts).*?(?=\n#+|$)'
+            'abstract': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:abstract|overview|summary).*?(?=\n#+|$)',
+            'introduction': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:introduction|background|overview).*?(?=\n#+|$)',
+            'methodology': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:methodology|methods|implementation|experiment|materials and methods).*?(?=\n#+|$)',
+            'results': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:results|findings|observations).*?(?=\n#+|$)',
+            'discussion': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:discussion|interpretation|analysis).*?(?=\n#+|$)',
+            'conclusion': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:conclusion|summary|final thoughts).*?(?=\n#+|$)'
         }
-        
+
+        # Loop over patterns and apply extraction logic for each section
         for section, pattern in section_patterns.items():
             match = re.search(pattern, paper_content, re.DOTALL)
             if match:
+                # Remove any heading at the start of the matched content
                 content = re.sub(r'^#+\s*\w+\s*', '', match.group(0), flags=re.IGNORECASE)
                 sections[section] = content.strip()
                 
@@ -80,19 +82,21 @@ class DocumentChunker:
     def __init__(self, chunk_size: int = 4096, overlap: int = 256):
         self.chunk_size = chunk_size
         self.overlap = overlap
-    
+
     def chunk_document(self, tokens: List[int]) -> List[List[int]]:
         chunks = []
         start = 0
-        
-        while start < len(tokens):
-            end = min(start + self.chunk_size, len(tokens))
+        document_length = len(tokens)
+
+        while start < document_length:
+            end = min(start + self.chunk_size, document_length)
             chunks.append(tokens[start:end])
-            start = end - self.overlap
-            
-            if end == len(tokens):
+            start = end - self.overlap  # Move the start point for the next chunk
+
+            # Break if we’ve reached the end of the document
+            if end == document_length:
                 break
-                
+
         return chunks
 
 # class SimilarityCalculator:
@@ -226,8 +230,9 @@ class SimilarityCalculator:
         transformer_score = self._calculate_transformer_similarity(text1, text2)
         
         # Adjust weights based on text length and content
-        weight_transformer = min(len(text1), len(text2)) / 10000  # Scale weight based on text length
-        weight_transformer = min(0.7, max(0.3, weight_transformer))  # Clamp between 0.3 and 0.7
+        weight_transformer = min(len(text1), len(text2)) / 8000
+        weight_transformer = np.clip(weight_transformer, 0.3, 0.7)
+
         weight_tfidf = 1 - weight_transformer
         
         # Normalize transformer score
@@ -245,12 +250,8 @@ class SimilarityCalculator:
         }
 
     def _normalize_similarity_score(self, score: float) -> float:
-        """
-        Normalize similarity scores to reduce over-correlation
-        """
-        # Apply sigmoid-like normalization
-        normalized = (2 / (1 + np.exp(-5 * (score - 0.5)))) - 1
-        return max(0, min(1, normalized))  # Clamp between 0 and 1
+        return np.clip((score + 1) / 2, 0, 1)  # normalize to [0, 1]
+
 
     def _calculate_tfidf_similarity(self, text1: str, text2: str) -> float:
         try:
@@ -350,33 +351,27 @@ class SimilarityCalculator:
         return document_embedding
 
     def _chunk_text(self, text: str) -> List[str]:
-        """
-        Improved text chunking with better overlap handling
-        """
-        # Tokenize with sentence boundaries
         sentences = nltk.sent_tokenize(text)
-        chunks = []
-        current_chunk = []
+        chunks, current_chunk = [], []
         current_length = 0
-        
+
         for sentence in sentences:
             sentence_tokens = self.tokenizer.tokenize(sentence)
             sentence_length = len(sentence_tokens)
-            
+
             if current_length + sentence_length > self.chunk_size:
                 if current_chunk:
-                    chunks.append(self.tokenizer.convert_tokens_to_string(current_chunk))
-                    # Keep last sentence for overlap
-                    current_chunk = current_chunk[-self.overlap:] if self.overlap > 0 else []
+                    chunks.append(current_chunk)
+                    current_chunk = current_chunk[-self.overlap:]  # Only retain overlap
                     current_length = len(current_chunk)
-                
+
             current_chunk.extend(sentence_tokens)
             current_length += sentence_length
-        
+
         if current_chunk:
-            chunks.append(self.tokenizer.convert_tokens_to_string(current_chunk))
-        
-        return chunks
+            chunks.append(current_chunk)
+
+        return [self.tokenizer.convert_tokens_to_string(chunk) for chunk in chunks]
 
 class ResearchPaperSimilarity:
     def __init__(self):
