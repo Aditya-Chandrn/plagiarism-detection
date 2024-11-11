@@ -146,7 +146,7 @@ async def get_document(document_id: str, token_data: dict = Depends(verify_token
 
 
 
-@router.get("/{filename}")
+@router.get("/file/{filename}")
 async def get_document(filename: str):    
     ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     DOCUMENTS_DIR = os.path.join(ROOT_DIR, "documents")

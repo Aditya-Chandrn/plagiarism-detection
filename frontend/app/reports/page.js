@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,47 +22,11 @@ import {
 } from "lucide-react";
 import ReportPreview from "@/components/ReportPreview";
 import UploadDocument from "@/components/UploadDocument";
-
-const initialReports = [
-  {
-    id: 1,
-    title: "Research_Paper_Final.pdf",
-    date: "2023-05-15",
-    similarity: 15,
-    aiContent: 5,
-  },
-  {
-    id: 2,
-    title: "Literature_Review.docx",
-    date: "2023-05-14",
-    similarity: 8,
-    aiContent: 2,
-  },
-  {
-    id: 3,
-    title: "Thesis_Chapter_3.pdf",
-    date: "2023-05-12",
-    similarity: 12,
-    aiContent: 7,
-  },
-  {
-    id: 4,
-    title: "Conference_Paper.docx",
-    date: "2023-05-10",
-    similarity: 20,
-    aiContent: 3,
-  },
-  {
-    id: 5,
-    title: "Journal_Article_Draft.pdf",
-    date: "2023-05-08",
-    similarity: 18,
-    aiContent: 10,
-  },
-];
+import axios from "axios";
+import Link from "next/link";
 
 export default function Component() {
-  const [reports, setReports] = useState(initialReports);
+  const [reports, setReports] = useState([]);
   const [sortConfig, setSortConfig] = useState({
     key: "date",
     direction: "desc",
@@ -82,10 +46,10 @@ export default function Component() {
 
   const filteredReports = sortedReports.filter(
     (report) =>
-      report.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      report.name?.toLowerCase().includes(searchTerm.toLowerCase()) &&
       (filterType === "all" ||
-        (filterType === "high-similarity" && report.similarity > 15) ||
-        (filterType === "high-ai" && report.aiContent > 5))
+        (filterType === "high-similarity" && report?.similarity > 15) ||
+        (filterType === "high-ai" && report?.aiContent > 5))
   );
 
   const handleSort = (key) => {
@@ -97,6 +61,54 @@ export default function Component() {
           : "asc",
     }));
   };
+
+  const fetchReports = async () => {
+    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+    try {
+      const response = await axios.get(`${BACKEND_URL}/document`, {
+        withCredentials: true,
+      });
+
+      const updatedReports = response.data.documents.map((report) => {
+        let similarityScore = 0,
+          aiScore = 0;
+        if (report.similarity_result && report.similarity_result?.length > 0) {
+          const totalScore = report.similarity_result?.reduce(
+            (sum, source) => sum + source.score,
+            0
+          );
+
+          similarityScore = totalScore / report.similarity_result?.length;
+          similarityScore = Math.ceil(similarityScore * 100);
+        }
+
+        if (report.ai_content_result?.length) {
+          report.ai_content_result.forEach((source) => {
+            aiScore += source.score;
+          });
+          aiScore = Math.ceil(
+            (aiScore / report.ai_content_result.length) * 100
+          );
+        }
+
+        return {
+          ...report,
+          similarityScore: similarityScore,
+          aiScore: aiScore,
+        };
+      });
+
+      setReports(updatedReports);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  console.log(reports);
+
+  useEffect(() => {
+    fetchReports();
+  }, []);
 
   return (
     <div className="max-w-[1200px] mx-auto px-6 py-8">
@@ -178,27 +190,31 @@ export default function Component() {
           </TableHeader>
           <TableBody>
             {filteredReports.map((report) => (
-              <TableRow key={report.id}>
-                <TableCell className="font-medium">{report.title}</TableCell>
-                <TableCell>{report.date}</TableCell>
+              <TableRow key={report._id}>
+                <TableCell className="font-medium">{report?.name}</TableCell>
+                <TableCell>
+                  {new Date(report.upload_date).toLocaleDateString()}
+                </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                    <span>{report.similarity}%</span>
+                    <span>{report.similarityScore}%</span>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Bot className="h-4 w-4 text-blue-500" />
-                    <span>{report.aiContent}%</span>
+                    <span>{report.aiScore}%</span>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex justify-center gap-4">
-                    <Button variant="ghost" size="sm">
-                      <Eye className="h-4 w-4" />
-                      <span className="ml-2">View</span>
-                    </Button>
+                    <Link href={`reports/${report._id}`}>
+                      <Button variant="ghost" size="sm">
+                        <Eye className="h-4 w-4" />
+                        <span className="ml-2">View</span>
+                      </Button>
+                    </Link>
                     <Button variant="ghost" size="sm">
                       <Download className="h-4 w-4" />
                       <span className="ml-2">Download</span>

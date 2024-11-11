@@ -1,58 +1,66 @@
-import React from "react";
+"use client";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertTriangle, Bot, ExternalLink } from "lucide-react";
-
-const reportData = {
-  documentName: "Research_Paper_Final.pdf",
-  content: `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam euismod, nisi vel consectetur interdum, nisl nunc egestas nunc, vitae tincidunt nisl nunc euismod nunc. Sed euismod, nisi vel consectetur interdum, nisl nunc egestas nunc, vitae tincidunt nisl nunc euismod nunc.
-
-  Nullam euismod, nisi vel consectetur interdum, nisl nunc egestas nunc, vitae tincidunt nisl nunc euismod nunc. Sed euismod, nisi vel consectetur interdum, nisl nunc egestas nunc, vitae tincidunt nisl nunc euismod nunc.
-  
-  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam euismod, nisi vel consectetur interdum, nisl nunc egestas nunc, vitae tincidunt nisl nunc euismod nunc. Sed euismod, nisi vel consectetur interdum, nisl nunc egestas nunc, vitae tincidunt nisl nunc euismod nunc.`,
-  similarityScore: 15,
-  aiGeneratedScore: 5,
-  sources: [
-    {
-      name: "Academic Journal XYZ",
-      url: "https://journal-xyz.com/article123",
-      match: 7,
-    },
-    {
-      name: "Conference Paper ABC",
-      url: "https://conference-abc.org/paper456",
-      match: 5,
-    },
-    {
-      name: "Online Article DEF",
-      url: "https://website-def.com/article789",
-      match: 3,
-    },
-  ],
-};
+import { useParams } from "next/navigation";
+import axios from "axios";
 
 export default function ReportDetailPage() {
+  const [report, setReport] = useState();
+  const params = useParams();
+
+  const fetchReport = async () => {
+    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+    try {
+      const response = await axios.get(`${BACKEND_URL}/document/${params.id}`, {
+        withCredentials: true,
+      });
+
+      const document = response.data;
+
+      let similarityScore = 0;
+      if (document.similarity_result?.length > 0) {
+        const totalScore = document.similarity_result.reduce(
+          (sum, source) => sum + source.score,
+          0
+        );
+
+        similarityScore = totalScore / document.similarity_result.length;
+      }
+
+      console.log(document);
+
+      similarityScore = Math.ceil(similarityScore * 100);
+
+      const updatedDocument = {
+        ...document,
+        similarityScore,
+      };
+
+      setReport(updatedDocument);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchReport();
+  }, []);
+
   return (
     <div className="container mx-auto p-4">
-      <h1 className="mb-6 text-2xl font-bold">
-        Report Detail: {reportData.documentName}
-      </h1>
+      <h4 className="mb-6 text-xl font-bold">Report Detail: {report?.name}</h4>
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* <Card className="h-[calc(100vh-6rem)] overflow-hidden"> */}
-        {/* <CardHeader>
-            <CardTitle>Document Content</CardTitle>
-          </CardHeader>
-          <CardContent> */}
         <embed
-          src="http://localhost:8000/document/classification-of-human-and-ai-generated-texts-investigating-1q5bto7ajj.md"
-          frameborder="0"
+          src={`http://localhost:8000/document/file/${report?.name}`}
+          frameBorder="0"
           width="100%"
-          height="800px"
+          height="480px"
         ></embed>
-        {/* </CardContent>
-        </Card> */}
 
         <Card className="h-[calc(100vh-6rem)] overflow-hidden">
           <CardHeader>
@@ -71,63 +79,73 @@ export default function ReportDetailPage() {
                         </span>
                       </div>
                       <span className="text-2xl font-bold text-red-700">
-                        {reportData.similarityScore}%
+                        {report?.similarityScore}%
                       </span>
                     </div>
                     <Progress
-                      value={reportData.similarityScore}
+                      value={report?.similarityScore}
                       className="h-2 bg-red-200"
-                      indicatorClassName="bg-red-500"
+                      indicatorclassname="bg-red-500"
                     />
                   </div>
-                  <div className="rounded-lg bg-blue-50 p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        <Bot className="h-5 w-5 text-blue-500" />
-                        <span className="font-medium text-sm text-blue-700">
-                          AI-Generated Content
-                        </span>
-                      </div>
-                      <span className="text-2xl font-bold text-blue-700">
-                        {reportData.aiGeneratedScore}%
-                      </span>
-                    </div>
-                    <Progress
-                      value={reportData.aiGeneratedScore}
-                      className="h-2 bg-blue-200"
-                      indicatorClassName="bg-blue-500"
-                    />
-                  </div>
-                </div>
 
-                <div>
-                  <h3 className="font-semibold text-lg mb-3">
-                    Similarity Sources
-                  </h3>
-                  <ul className="space-y-4">
-                    {reportData.sources.map((source, index) => (
-                      <li
-                        key={index}
-                        className="flex items-center justify-between"
-                      >
-                        <div>
-                          <h4 className="font-medium">{source.name}</h4>
-                          <a
-                            href={source.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:underline flex items-center"
-                          >
-                            {source.url}{" "}
-                            <ExternalLink className="ml-1 h-3 w-3" />
-                          </a>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3">
+                      Similarity Sources
+                    </h3>
+                    <ul className="space-y-4">
+                      {report?.similarity_result?.map((result, index) => (
+                        <li
+                          key={index}
+                          className="flex items-center justify-between"
+                        >
+                          <div>
+                            <h4 className="font-medium">
+                              {result.source.name}
+                            </h4>
+                            <a
+                              href={result.source.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-blue-600 hover:underline flex items-center"
+                            >
+                              {result.source.url}{" "}
+                              <ExternalLink className="ml-1 h-3 w-3" />
+                            </a>
+                          </div>
+                          <span className="text-sm text-gray-500">
+                            {Math.ceil(result.score * 100)}% Match
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {report?.ai_content_result?.map((res, idx) => {
+                    return (
+                      <div className="rounded-lg bg-blue-50 p-4" key={idx}>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <Bot className="h-5 w-5 text-blue-500" />
+                            <span className="font-medium text-sm text-blue-700">
+                              AI-Generated Content
+                            </span>
+                          </div>
+                          <span className="text-2xl font-bold text-blue-700">
+                            {Math.ceil(res.score * 100)} %
+                          </span>
                         </div>
-                        <span className="text-sm text-gray-500">
-                          {source.match}% Match
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                        <div className="mb-2 text-sm text-blue-600">
+                          <strong>Method:</strong> {res.method_name || "N/A"}
+                        </div>
+                        <Progress
+                          value={Math.ceil(res.score * 100)}
+                          className="h-2 bg-blue-200"
+                          indicatorclassname="bg-blue-500"
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </ScrollArea>
