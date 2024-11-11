@@ -103,7 +103,7 @@ class SimilarityCalculator:
         for chunk1 in text1_chunks:
             for chunk2 in text2_chunks:
                 try:
-                    similarity = self._calculate_bert_similarity(chunk1, chunk2)
+                    similarity = self.calculate_bert_similarity(chunk1, chunk2)
                     similarities.append(similarity)
                 except Exception as e:
                     print(f"Error in chunk similarity calculation: {e}")
@@ -121,12 +121,18 @@ class SimilarityCalculator:
             print(f"Error in BERT similarity calculation for chunk: {e}")
             return 0.0
 
-def research_similarity():
-    paper1_path = 'C:/College/College Work/plagiarism-detection/backend/documents/ai content similarity-2.md'
-    paper2_path = 'C:/College/College Work/plagiarism-detection/backend/documents/ai content similarity.md'
+    def combined_similarity(self, text1, text2, tfidf_weight=0.3, bert_weight=0.7):
+        tfidf_score = self.calculate_tfidf_similarity(text1, text2)
+        bert_score = self.calculate_transformer_similarity(text1, text2)
+        combined_score = (tfidf_weight * tfidf_score) + (bert_weight * bert_score)
+        return combined_score, {"TF-IDF": tfidf_score, "BERT": bert_score}
+
+def research_similarity(path1):
+    # paper1_path = 'C:/College/College Work/plagiarism-detection/backend/documents/ai content similarity-2.md'
+    paper2_path = 'C:/College/College Work/plagiarism-detection/backend/documents/ai content similarity-1.md'
     
     get_papers = GetPapers()
-    paper1, paper2 = get_papers.load_papers(paper1_path, paper2_path)
+    paper1, paper2 = get_papers.load_papers(path1, paper2_path)
     
     if not paper1 or not paper2:
         print("Error loading papers")
@@ -141,6 +147,7 @@ def research_similarity():
         return
     
     similarity_calculator = SimilarityCalculator()
+  
     
     print('Similarity Score by Sections')
     print('-'*30)
@@ -150,13 +157,18 @@ def research_similarity():
         text2 = preprocessor.preprocess_text(sections_paper2[section])
         
         if text1 and text2:
+            combined_score, individual_scores = similarity_calculator.combined_similarity(text1, text2)
             tfidf_score = similarity_calculator.calculate_tfidf_similarity(text1, text2)
             bert_score = similarity_calculator.calculate_bert_similarity(text1, text2)
             
-            print(f"{section.capitalize():<15}")
-            print(f"Individual Scores: \nTF-IDF: {tfidf_score:.4f}, "
-                  f"BERT: {bert_score:.4f}")
+            # print(f"{section.capitalize():<15}")
+            # print(f"Individual Scores: \nTF-IDF: {tfidf_score:.4f}, "
+            #       f"BERT: {bert_score:.4f}")
+            print(f"{section.capitalize():<15} : Combined Score: {combined_score:.4f}")
+            print(f"Individual Scores: TF-IDF: {individual_scores['TF-IDF']:.4f}, "
+                  f"BERT: {individual_scores['BERT']:.4f}")
         else:
             print(f"{section.capitalize():<15} : No content available")
         print()
 
+    return {"data": {"name": "src1", "url": "http://abc.com"}, "bert_score": bert_score, "tfidf_score": tfidf_score, "score" : combined_score}

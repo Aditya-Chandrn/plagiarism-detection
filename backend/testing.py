@@ -25,7 +25,7 @@ def extract_title_and_abstract(md_file):
     return abstract
 
 # Example usage
-md_file = "./new.md"
+md_file = "C:/College/College Work/plagiarism-detection/backend/documents/ai content similarity-1.md"
 abstract = extract_title_and_abstract(md_file)
 
 # print("Title:", title)
@@ -140,6 +140,6 @@ for result in results:
     i+=1
     # print(result['snippet'])
 
-# with open("urls.txt", "w", encoding='utf-8') as f:
-#     for url in results:
-#         f.write(f"{url['link']}\n")
+with open("urls.txt", "w", encoding='utf-8') as f:
+    for url in results:
+        f.write(f"{url['link']}\n")

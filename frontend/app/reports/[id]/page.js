@@ -1,144 +1,164 @@
-import React from "react";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { AlertTriangle, Bot, ExternalLink, ChevronDown } from "lucide-react";
+import axios from "axios";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertTriangle, Bot, ExternalLink } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
-const reportData = {
-  documentName: "Research_Paper_Final.pdf",
-  content: `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam euismod, nisi vel consectetur interdum, nisl nunc egestas nunc, vitae tincidunt nisl nunc euismod nunc. Sed euismod, nisi vel consectetur interdum, nisl nunc egestas nunc, vitae tincidunt nisl nunc euismod nunc.
+export default function Component() {
+  const [report, setReport] = useState(null);
+  const params = useParams();
 
-  Nullam euismod, nisi vel consectetur interdum, nisl nunc egestas nunc, vitae tincidunt nisl nunc euismod nunc. Sed euismod, nisi vel consectetur interdum, nisl nunc egestas nunc, vitae tincidunt nisl nunc euismod nunc.
-  
-  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam euismod, nisi vel consectetur interdum, nisl nunc egestas nunc, vitae tincidunt nisl nunc euismod nunc. Sed euismod, nisi vel consectetur interdum, nisl nunc egestas nunc, vitae tincidunt nisl nunc euismod nunc.`,
-  similarityScore: 15,
-  aiGeneratedScore: 5,
-  sources: [
-    {
-      name: "Academic Journal XYZ",
-      url: "https://journal-xyz.com/article123",
-      match: 7,
-    },
-    {
-      name: "Conference Paper ABC",
-      url: "https://conference-abc.org/paper456",
-      match: 5,
-    },
-    {
-      name: "Online Article DEF",
-      url: "https://website-def.com/article789",
-      match: 3,
-    },
-  ],
-};
+  useEffect(() => {
+    const fetchReport = async () => {
+      try {
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/document/${params.id}`,
+          { withCredentials: true }
+        );
+        const document = response.data;
+        const similarityScore = document.similarity_result?.length
+          ? Math.ceil(
+              (document.similarity_result.reduce(
+                (sum, source) => sum + source.score,
+                0
+              ) /
+                document.similarity_result.length) *
+                100
+            )
+          : 0;
 
-export default function ReportDetailPage() {
+        setReport({ ...document, similarityScore });
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchReport();
+  }, [params.id]);
+
+  if (!report) return null;
+
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="mb-6 text-2xl font-bold">
-        Report Detail: {reportData.documentName}
-      </h1>
+    <div className="container mx-auto p-6">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">
+          Report Analysis: {report.name}
+        </h1>
+      </div>
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* <Card className="h-[calc(100vh-6rem)] overflow-hidden"> */}
-        {/* <CardHeader>
-            <CardTitle>Document Content</CardTitle>
-          </CardHeader>
-          <CardContent> */}
-        <embed
-          src="http://localhost:8000/document/classification-of-human-and-ai-generated-texts-investigating-1q5bto7ajj.pdf"
-          frameborder="0"
-          width="100%"
-          height="800px"
-        ></embed>
-        {/* </CardContent>
-        </Card> */}
+        <div className="rounded-lg border bg-card shadow-sm">
+          <embed
+            src={`${process.env.NEXT_PUBLIC_BACKEND_URL}/document/file/${report.name}`}
+            className="h-[calc(100vh-8rem)] w-full rounded-lg"
+          />
+        </div>
 
-        <Card className="h-[calc(100vh-6rem)] overflow-hidden">
+        <Card className="h-[calc(100vh-8rem)]">
           <CardHeader>
             <CardTitle>Analysis Results</CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[calc(100vh-10rem)] pr-4">
+            <ScrollArea className="h-[calc(100vh-12rem)] pr-4">
               <div className="space-y-6">
-                <div className="space-y-4">
-                  <div className="rounded-lg bg-red-50 p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        <AlertTriangle className="h-5 w-5 text-red-500" />
-                        <span className="font-medium text-sm text-red-700">
-                          Similarity Score
-                        </span>
-                      </div>
-                      <span className="text-2xl font-bold text-red-700">
-                        {reportData.similarityScore}%
+                <div className="rounded-xl bg-red-50 p-6">
+                  <div className="mb-4 flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-red-600" />
+                      <span className="font-medium text-red-900">
+                        Similarity Score
                       </span>
                     </div>
-                    <Progress
-                      value={reportData.similarityScore}
-                      className="h-2 bg-red-200"
-                      indicatorClassName="bg-red-500"
-                    />
+                    <span className="text-3xl font-bold text-red-700">
+                      {report.similarityScore}%
+                    </span>
                   </div>
-                  <div className="rounded-lg bg-blue-50 p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        <Bot className="h-5 w-5 text-blue-500" />
-                        <span className="font-medium text-sm text-blue-700">
-                          AI-Generated Content
-                        </span>
-                      </div>
-                      <span className="text-2xl font-bold text-blue-700">
-                        {reportData.aiGeneratedScore}%
-                      </span>
-                    </div>
-                    <Progress
-                      value={reportData.aiGeneratedScore}
-                      className="h-2 bg-blue-200"
-                      indicatorClassName="bg-blue-500"
-                    />
-                  </div>
+                  <Progress
+                    value={report.similarityScore}
+                    className="h-2.5 bg-red-200"
+                    indicatorClassName="bg-red-600"
+                  />
                 </div>
 
-                <div>
-                  <h3 className="font-semibold text-lg mb-3">
-                    Similarity Sources
-                  </h3>
-                  <ul className="space-y-4">
-                    {reportData.sources.map((source, index) => (
-                      <li
-                        key={index}
-                        className="flex items-center justify-between"
-                      >
-                        <div>
-                          <h4 className="font-medium">{source.name}</h4>
-                          <a
-                            href={source.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:underline flex items-center"
+                <Accordion type="single" collapsible className="w-full">
+                  <AccordionItem value="similarity-sources">
+                    <AccordionTrigger className="text-xl font-semibold">
+                      Similarity Sources
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-4 pt-4">
+                        {report.similarity_result?.map((result, index) => (
+                          <div
+                            key={index}
+                            className="rounded-lg border bg-card p-4 shadow-sm"
                           >
-                            {source.url}{" "}
-                            <ExternalLink className="ml-1 h-3 w-3" />
-                          </a>
-                        </div>
-                        <span className="text-sm text-gray-500">
-                          {source.match}% Match
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                            <div className="flex items-start justify-between">
+                              <div className="space-y-1">
+                                <h3 className="font-medium">
+                                  {result.source.name}
+                                </h3>
+                                <a
+                                  href={result.source.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center text-sm text-blue-600 hover:text-blue-800"
+                                >
+                                  {result.source.url}
+                                  <ExternalLink className="ml-1 h-3 w-3" />
+                                </a>
+                              </div>
+                              <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium">
+                                {Math.ceil(result.score * 100)}% Match
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
 
-                <div>
-                  <h3 className="font-semibold text-lg mb-3">
-                    AI-Generated Content Analysis
-                  </h3>
-                  <p className="text-sm text-gray-700">
-                    Sections with high probability of AI generation are
-                    highlighted in the document view. These sections require
-                    careful review to ensure academic integrity.
-                  </p>
+                <Separator />
+
+                <div className="space-y-4">
+                  <h2 className="text-xl font-semibold">
+                    AI Detection Results
+                  </h2>
+                  {report.ai_content_result?.map((result, index) => (
+                    <div key={index} className="rounded-xl bg-blue-50 p-6">
+                      <div className="mb-4 flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          <Bot className="h-5 w-5 text-blue-600" />
+                          <span className="font-medium text-blue-900">
+                            AI-Generated Content
+                          </span>
+                        </div>
+                        <span className="text-3xl font-bold text-blue-700">
+                          {Math.ceil(result.score * 100)}%
+                        </span>
+                      </div>
+                      <div className="mb-3 text-sm text-blue-700">
+                        <span className="font-medium">Method:</span>{" "}
+                        {result.method_name || "N/A"}
+                      </div>
+                      <Progress
+                        value={Math.ceil(result.score * 100)}
+                        className="h-2.5 bg-blue-200"
+                        indicatorClassName="bg-blue-600"
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
             </ScrollArea>

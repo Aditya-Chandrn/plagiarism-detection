@@ -8,5 +8,6 @@ client = motor.motor_asyncio.AsyncIOMotorClient(config["MONGODB_CLUSTER_URI"])
 database = client[config["DATABASE_NAME"]]
 
 user_collection = database["users"]
+document_collection = database["documents"]
 
 print("Connected to the MongoDB!")

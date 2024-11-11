@@ -1,22 +1,44 @@
-from typing_extensions import Annotated, Literal, Union
-from pydantic import Field, TypeAdapter, BaseModel
+# from typing import List, Optional
+from typing_extensions import Annotated, List, Optional
+from pydantic import BaseModel, Field, ConfigDict
+from pydantic.functional_validators import BeforeValidator
+from datetime import datetime, timezone, date
+
+PyObjectId = Annotated[str, BeforeValidator(str)]
+
+class AIGeneratedContent(BaseModel):
+      method_name: str
+      score: float
 
 
-class ResearchPaper(BaseModel):
-      document_type: Literal["research_paper"] = "research_paper";
-      pass
+class SimilaritySource(BaseModel):
+      name: str
+      url: str
 
-class Assignment(BaseModel):
-      document_type: Literal["assignemnt"] = "assignment";
-      pass
-
-
-DocumentUnion = Annotated[Union[ResearchPaper, Assignment], Field(discriminator="document_type")]
-DocumentUnionType = TypeAdapter(DocumentUnion)
-
+    
+class Similarity(BaseModel):
+      source: SimilaritySource
+      bert_score: float
+      tfidf_score: float
+      score: float
+      
+      
 class Document(BaseModel):
-      pass
+      id: Optional[PyObjectId] = Field(alias="_id", default=None)
+      user_id: Optional[PyObjectId] = Field(alias="_id", default=None)
+      name: str
+      path: str
+      md_path: str
+      ai_content_result: List[AIGeneratedContent]
+      similarity_result: List[Similarity]
+      upload_date: datetime
+
+      model_config = ConfigDict()
+      model_config["from_attributes"] = True
 
 
 class DocumentResponse(BaseModel):
-      pass
+    documents: List[Document]
+    
+    model_config = ConfigDict()
+    model_config["from_attributes"] = True

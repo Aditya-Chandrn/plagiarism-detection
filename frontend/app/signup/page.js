@@ -6,9 +6,12 @@ import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
+import axios from "axios";
 
 export default function SignUpPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     fname: "",
     lname: "",
@@ -20,6 +23,8 @@ export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const { toast } = useToast();
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
@@ -30,10 +35,6 @@ export default function SignUpPage() {
 
   const validateForm = () => {
     let newErrors = {};
-
-    if (!formData.username || formData.username.length < 3) {
-      newErrors.username = "Username must be at least 3 characters long";
-    }
 
     if (!formData.email || !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Please enter a valid email address";
@@ -51,20 +52,31 @@ export default function SignUpPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (validateForm()) {
-      toast({
-        title: "You submitted the following values:",
-        description: (
-          <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-            <code className="text-white">
-              {JSON.stringify(formData, null, 2)}
-            </code>
-          </pre>
-        ),
-      });
-      console.log(formData);
+      try {
+        const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+        const response = await axios.post(
+          `${BACKEND_URL}/user/signup`,
+          formData
+        );
+
+        router.push("/login");
+
+        toast({
+          title: "Signed Up successfully",
+        });
+      } catch (error) {
+        console.log(error);
+
+        toast({
+          title: "Error",
+          description:
+            "Failed to signup. Please check the entered details and try again.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -86,35 +98,37 @@ export default function SignUpPage() {
           </p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <Label htmlFor="fname">First Name</Label>
-            <Input
-              id="fname"
-              name="fname"
-              type="text"
-              placeholder="johndoe"
-              value={formData.fname}
-              onChange={handleChange}
-            />
+          <div className="flex items-center space-x-6 mt-6">
+            <div className="w-1/2">
+              <Label htmlFor="fname">First Name</Label>
+              <Input
+                id="fname"
+                name="fname"
+                type="text"
+                placeholder="johndoe"
+                value={formData.fname}
+                onChange={handleChange}
+              />
 
-            {errors.fname && (
-              <p className="mt-1 text-sm text-red-600">{errors.username}</p>
-            )}
-          </div>
-          <div>
-            <Label htmlFor="lname">Last Name</Label>
-            <Input
-              id="lname"
-              name="lname"
-              type="text"
-              placeholder="johndoe"
-              value={formData.lname}
-              onChange={handleChange}
-            />
+              {errors.fname && (
+                <p className="mt-1 text-sm text-red-600">{errors.username}</p>
+              )}
+            </div>
+            <div className="w-1/2">
+              <Label htmlFor="lname">Last Name</Label>
+              <Input
+                id="lname"
+                name="lname"
+                type="text"
+                placeholder="johndoe"
+                value={formData.lname}
+                onChange={handleChange}
+              />
 
-            {errors.lname && (
-              <p className="mt-1 text-sm text-red-600">{errors.username}</p>
-            )}
+              {errors.lname && (
+                <p className="mt-1 text-sm text-red-600">{errors.username}</p>
+              )}
+            </div>
           </div>
           <div>
             <Label htmlFor="email">Email</Label>

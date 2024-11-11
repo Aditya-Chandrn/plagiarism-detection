@@ -62,9 +62,21 @@ async def login_user(user: user_schema.UserLogin):
             )
     
       data = {
-           "name" : db_user["name"],
+           "fname" : db_user["fname"],
+           "lname" : db_user["lname"],
            "email" : db_user["email"],
            "user_id": str(db_user["_id"]),
       }
       auth_token = create_auth_token(data)
-      return auth_token_schemas.AuthToken(auth_token = auth_token)
+
+      response = JSONResponse(content={"message": "Login successful"})
+      response.set_cookie(
+            key="plagiarism-access-token", 
+            value=auth_token,
+            httponly=True,      
+            secure=True,      
+            samesite="Strict",
+            max_age=3600     # token expiry in seconds
+      )
+      return response
+
