@@ -2,6 +2,8 @@ import re
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
@@ -37,7 +39,7 @@ class Preprocessor:
             'results': '',
             'discussion': '',
             'conclusion': '',
-            'full_text': paper_content
+            'full_text': paper_content,
         }
 
         section_patterns = {
@@ -50,6 +52,7 @@ class Preprocessor:
         }
 
         for section, pattern in section_patterns.items():
+            match = re.search(pattern, paper_content, re.DOTALL)
             match = re.search(pattern, paper_content, re.DOTALL)
             if match:
                 content = re.sub(r'^#+\s*\w+\s*', '',

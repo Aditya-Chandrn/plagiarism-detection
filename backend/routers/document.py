@@ -36,6 +36,7 @@ async def upload_document(token_data: dict = Depends(verify_token), document: Up
         print(f"Saving file to: {file_path}")
 
         # Save file
+        # Save file
         content = await document.read()
         with open(file_path, "wb") as f:
             f.write(content)
@@ -45,6 +46,7 @@ async def upload_document(token_data: dict = Depends(verify_token), document: Up
         print(f"Error while saving file: {str(e)}")
         return JSONResponse(content={"error": f"Failed to save file: {str(e)}"}, status_code=500)
 
+    # Convert to Markdown
     # Convert to Markdown
     try:
         md_file_path = await convert_to_md(file_path)
@@ -63,6 +65,7 @@ async def upload_document(token_data: dict = Depends(verify_token), document: Up
         print(f"Markdown conversion failed: {str(e)}")
         return JSONResponse(content={"error": f"Markdown conversion failed: {str(e)}"}, status_code=500)
 
+    # AI and Similarity Score Computation
     # AI and Similarity Score Computation
     try:
         ai_score_future = executor.submit(

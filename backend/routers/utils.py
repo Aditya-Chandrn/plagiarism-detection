@@ -15,6 +15,10 @@ from nlp.ai_detection.detect_gpt_detection import detect_gpt_main
 
 from pydantic_models.document_schemas import AIGeneratedContent, Similarity, SimilaritySource
 
+from nlp.ai_detection.roberta_ai_detection import roberta_ai_detection
+from nlp.ai_detection.detect_gpt_detection import detect_gpt_main
+
+
 config = dotenv_values(".env")
 
 
