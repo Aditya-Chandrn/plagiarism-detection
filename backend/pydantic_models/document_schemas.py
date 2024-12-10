@@ -18,6 +18,8 @@ class SimilaritySource(BaseModel):
     
 class Similarity(BaseModel):
       source: SimilaritySource
+      bert_score: float
+      tfidf_score: float
       score: float
       
       

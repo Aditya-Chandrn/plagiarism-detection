@@ -17,7 +17,7 @@ import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger,
+  AccordionTrigger
 } from "@/components/ui/accordion";
 
 export default function Component() {
@@ -143,7 +143,7 @@ export default function Component() {
                   <Progress
                     value={report.similarityScore}
                     className="h-2.5 bg-red-200"
-                    indicatorClassName="bg-red-600"
+                    indicatorclassname="bg-red-600"
                   />
                 </div>
 
@@ -174,9 +174,16 @@ export default function Component() {
                                   <ExternalLink className="ml-1 h-3 w-3" />
                                 </a>
                               </div>
-                              <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium">
-                                {Math.ceil(result.score * 100)}% Match
-                              </span>
+                              <div className="flex flex-col gap-2">
+                                <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium">
+                                  Bert Score:{" "}
+                                  {Math.ceil(result.bert_score * 100)}% Match
+                                </span>
+                                <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium">
+                                  TF-IDF Score:{" "}
+                                  {Math.ceil(result.tfidf_score * 100)}% Match
+                                </span>
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -211,7 +218,7 @@ export default function Component() {
                       <Progress
                         value={Math.ceil(result.score * 100)}
                         className="h-2.5 bg-blue-200"
-                        indicatorClassName="bg-blue-600"
+                        indicatorclassname="bg-blue-600"
                       />
                     </div>
                   ))}
