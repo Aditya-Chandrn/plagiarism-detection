@@ -26,6 +26,9 @@
     "next": "14.2.15",
     "react": "^18",
     "react-dom": "^18",
+    "react-markdown": "^9.0.1",
+    "react-showdown": "^2.3.1",
+    "remark-gfm": "^4.0.0",
     "tailwind-merge": "^2.5.3",
     "tailwindcss-animate": "^1.0.7"
   },

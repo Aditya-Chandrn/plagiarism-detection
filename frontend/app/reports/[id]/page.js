@@ -5,6 +5,10 @@ import { useParams } from "next/navigation";
 import { AlertTriangle, Bot, ExternalLink, ChevronDown } from "lucide-react";
 import axios from "axios";
 
+import MarkdownView from "react-showdown";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,6 +23,15 @@ import {
 export default function Component() {
   const [report, setReport] = useState(null);
   const params = useParams();
+
+  const highlightText = [
+    "Recent neural language models have taken a significant step forward in producing remarkably controllable, fluent, and grammatical text",
+    "argument logistics",
+    "AI has the potential to generate scientific content",
+    "The AI-generated scientific content is more likely to contain errors in factual issues",
+  ];
+
+  const [fileContent, setFileContent] = useState("");
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -48,6 +61,42 @@ export default function Component() {
     fetchReport();
   }, [params.id]);
 
+  useEffect(() => {
+    const fetchFile = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/document/file/test.md`
+        );
+
+        if (!response.ok) {
+          throw new Error(`Error: ${response.statusText}`);
+        }
+
+        const text = await response.text();
+        setFileContent(text);
+      } catch (error) {
+        console.error("Error fetching file:", error);
+      }
+    };
+
+    fetchFile();
+  }, []);
+
+  const highlightTextInMarkdown = (text) => {
+    if (!text) return "";
+
+    let highlightedText = text;
+    highlightText.forEach((phrase) => {
+      const regex = new RegExp(`(${phrase})`, "gi");
+      highlightedText = highlightedText.replace(
+        regex,
+        '<span class="highlight">$1</span>'
+      );
+    });
+
+    return highlightedText;
+  };
+
   if (!report) return null;
 
   return (
@@ -59,10 +108,17 @@ export default function Component() {
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-lg border bg-card shadow-sm">
-          <embed
+          {/* <embed
             src={`${process.env.NEXT_PUBLIC_BACKEND_URL}/document/file/${report.name}`}
             className="h-[calc(100vh-8rem)] w-full rounded-lg"
-          />
+          /> */}
+          <ScrollArea className="h-[calc(100vh-8rem)] w-full rounded-lg">
+            <div
+              dangerouslySetInnerHTML={{
+                __html: highlightTextInMarkdown(fileContent),
+              }}
+            />
+          </ScrollArea>
         </div>
 
         <Card className="h-[calc(100vh-8rem)]">
