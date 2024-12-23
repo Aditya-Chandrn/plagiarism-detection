@@ -76,7 +76,3 @@ body {
     @apply bg-background text-foreground;
   }
 }
-
-.highlight {
-  background-color: #fecaca;
-}

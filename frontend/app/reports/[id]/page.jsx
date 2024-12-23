@@ -6,8 +6,6 @@ import { AlertTriangle, Bot, ExternalLink, ChevronDown } from "lucide-react";
 import axios from "axios";
 
 import MarkdownView from "react-showdown";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -17,21 +15,58 @@ import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger
+  AccordionTrigger,
 } from "@/components/ui/accordion";
+import { SourceSelector } from "@/components/SourceSelector";
+
+const sources = [
+  {
+    id: "source1",
+    name: "Source 1",
+    color: "#ef4444",
+    highlights: [
+      "Recent neural language models have taken a significant step forward in producing remarkably controllable, fluent, and grammatical text",
+      "The advances in NLG models have empowered writing aids, such as autocomplete",
+      'We find that there exists a "writing style" gap between AI-generated scientific text and human-written scientific text',
+    ],
+  },
+  {
+    id: "source2",
+    name: "Source 2",
+    color: "#8b5cf6",
+    highlights: [
+      "AI has the potential to generate scientific content",
+      "The AI-generated scientific content is more likely to contain errors in factual issues",
+      "As strong as the NLG model is, it still makes mistakes, such as generating literal correct but inconsistent and counterfactual text",
+      "As the generation and the detection are a process of a mutual game that presents a spiral and wave-like evolution",
+    ],
+  },
+  {
+    id: "source3",
+    name: "Source 3",
+    color: "#059669",
+    highlights: [
+      "Moreover, we also conduct a case study from the view of coherence, consistency, and argument logistics",
+      "the ability to create human-like content with unprecedented speed presents additional technical and social challenges",
+      "AI writing assistant can support people in writing text such as songs, stories, press releases, interviews, essays, and technical manuals",
+    ],
+  },
+];
+
+const highlightText = [
+  "Recent neural language models have taken a significant step forward in producing remarkably controllable, fluent, and grammatical text",
+  "argument logistics",
+  "AI has the potential to generate scientific content",
+  "The AI-generated scientific content is more likely to contain errors in factual issues",
+  "the ability to create human-like content with unprecedented speed presents additional technical and social challenges",
+  "The advances in NLG models have empowered writing aids, such as autocomplete",
+];
 
 export default function Component() {
   const [report, setReport] = useState(null);
-  const params = useParams();
-
-  const highlightText = [
-    "Recent neural language models have taken a significant step forward in producing remarkably controllable, fluent, and grammatical text",
-    "argument logistics",
-    "AI has the potential to generate scientific content",
-    "The AI-generated scientific content is more likely to contain errors in factual issues",
-  ];
-
+  const [activeSource, setActiveSource] = useState();
   const [fileContent, setFileContent] = useState("");
+  const params = useParams();
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -86,12 +121,18 @@ export default function Component() {
     if (!text) return "";
 
     let highlightedText = text;
-    highlightText.forEach((phrase) => {
-      const regex = new RegExp(`(${phrase})`, "gi");
-      highlightedText = highlightedText.replace(
-        regex,
-        '<span class="highlight">$1</span>'
-      );
+    const sourcesToUse = activeSource
+      ? sources.filter((s) => s.id === activeSource)
+      : sources;
+
+    sourcesToUse.forEach((source) => {
+      source.highlights.forEach((phrase) => {
+        const regex = new RegExp(`(${phrase})`, "gi");
+        highlightedText = highlightedText.replace(
+          regex,
+          `<span style="background-color: ${source.color}40; color: ${source.color}; font-weight: 500; padding: 1px">$1</span>`
+        );
+      });
     });
 
     return highlightedText;
@@ -108,16 +149,8 @@ export default function Component() {
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-lg border bg-card shadow-sm">
-          {/* <embed
-            src={`${process.env.NEXT_PUBLIC_BACKEND_URL}/document/file/${report.name}`}
-            className="h-[calc(100vh-8rem)] w-full rounded-lg"
-          /> */}
-          <ScrollArea className="h-[calc(100vh-8rem)] w-full rounded-lg">
-            <div
-              dangerouslySetInnerHTML={{
-                __html: highlightTextInMarkdown(fileContent),
-              }}
-            />
+          <ScrollArea className="h-[calc(100vh-8rem)] w-full rounded-lg p-2">
+            <MarkdownView markdown={highlightTextInMarkdown(fileContent)} />
           </ScrollArea>
         </div>
 
@@ -128,6 +161,17 @@ export default function Component() {
           <CardContent>
             <ScrollArea className="h-[calc(100vh-12rem)] pr-4">
               <div className="space-y-6">
+                <div className="space-y-4">
+                  <h2 className="text-xl font-semibold">Source Highlights</h2>
+                  <SourceSelector
+                    sources={sources}
+                    activeSource={activeSource}
+                    onSourceSelect={setActiveSource}
+                  />
+                </div>
+
+                <Separator />
+
                 <div className="rounded-xl bg-red-50 p-6">
                   <div className="mb-4 flex items-start justify-between">
                     <div className="flex items-center gap-2">

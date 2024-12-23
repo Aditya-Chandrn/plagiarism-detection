@@ -47,7 +47,6 @@ async def upload_document(token_data: dict = Depends(verify_token), document: Up
         return JSONResponse(content={"error": f"Failed to save file: {str(e)}"}, status_code=500)
 
     # Convert to Markdown
-    # Convert to Markdown
     try:
         md_file_path = await convert_to_md(file_path)
         print(f"Converted to markdown: {md_file_path}")
@@ -55,6 +54,10 @@ async def upload_document(token_data: dict = Depends(verify_token), document: Up
         # Move Markdown to standardized location
         standardized_md_path = os.path.join(
             DOCUMENTS_FOLDER, os.path.basename(md_file_path))
+        
+        if os.path.exists(standardized_md_path):
+            os.remove(standardized_md_path)  # Remove the existing file if it exists
+        
         shutil.move(md_file_path, standardized_md_path)
         print(f"Markdown file moved to: {standardized_md_path}")
 
