@@ -6,7 +6,6 @@ from dotenv import dotenv_values
 from docx import Document as DocxDocument
 import subprocess
 import os
-import random
 from nlp import research_similarity
 
 from nlp.ai_detection.roberta_ai_detection import roberta_ai_detection
@@ -18,6 +17,9 @@ from pydantic_models.document_schemas import AIGeneratedContent, Similarity, Sim
 from nlp.ai_detection.roberta_ai_detection import roberta_ai_detection
 from nlp.ai_detection.detect_gpt_detection import detect_gpt_main
 
+from pathlib import Path
+from paperscraper.pdf import save_pdf
+from paperscraper.arxiv import  get_arxiv_papers
 
 config = dotenv_values(".env")
 
@@ -148,3 +150,38 @@ def detect_ai_generated_content(file_path) -> List[AIGeneratedContent]:
                            score=roberta_score),
         AIGeneratedContent(method_name="Detect GPT", score=detect_gpt_score)
     ]
+
+
+async def scrape_and_save_research_papers(title):
+    output_folder = Path("backend/documents/scraped_papers")
+    output_folder.mkdir(parents=True, exist_ok=True)
+
+    result = get_arxiv_papers(query = title, max_results=2)
+
+    scraped_papers = []
+
+    for index, row in result.iterrows():
+        doi = row.get("doi")
+        title = row.get("title")
+        journal = row.get("journal")
+
+        if not doi:
+            print(f"Skipping paper at index {index}: DOI not found.")
+            continue
+
+        filename = doi.replace("/", "_") + ".pdf"
+        filepath = output_folder / filename
+
+        save_pdf({"doi": doi}, filepath=str(filepath))
+
+        paper_details = {
+            "doi": doi,
+            "title": title,
+            "journal": journal,
+            "path": str(filepath),
+        }
+        scraped_papers.append(paper_details)
+
+    print(f"PDFs downloaded into the '{output_folder}' folder.")
+
+    return scraped_papers

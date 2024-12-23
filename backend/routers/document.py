@@ -3,7 +3,7 @@ from fastapi import APIRouter, File, UploadFile, Depends, HTTPException
 from dotenv import dotenv_values
 import os
 from fastapi.responses import JSONResponse, FileResponse
-from .utils import verify_token, convert_to_md, detect_ai_generated_content, detect_similarity
+from .utils import verify_token, convert_to_md, detect_ai_generated_content, detect_similarity, read_md_file, scrape_and_save_research_papers
 from concurrent.futures import ProcessPoolExecutor
 import asyncio
 import shutil
@@ -68,7 +68,25 @@ async def upload_document(token_data: dict = Depends(verify_token), document: Up
         print(f"Markdown conversion failed: {str(e)}")
         return JSONResponse(content={"error": f"Markdown conversion failed: {str(e)}"}, status_code=500)
 
-    # AI and Similarity Score Computation
+    try:
+        # Read MD Content and Extract Title
+        md_content = read_md_file(standardized_md_path)
+        title = md_content.split('\n')[0].replace('#', '').strip()
+
+        # Scrape papers from ArXiv 
+        scraped_paper_details = await scrape_and_save_research_papers(title)
+
+        for paper in scraped_paper_details:
+            path = await convert_to_md(paper['path'])
+            paper['md_path'] = path
+        
+        print(f"Scraped papers converted to md: {scraped_paper_details}")
+       
+    except Exception as e:
+        print(f"Error while scraping papers: {str(e)}")
+        return JSONResponse(content={"error": f"Failed to scrape papers: {str(e)}"}, status_code=500)
+
+
     # AI and Similarity Score Computation
     try:
         ai_score_future = executor.submit(
