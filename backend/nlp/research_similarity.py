@@ -141,7 +141,8 @@ class SimilarityCalculator:
 
 def research_similarity(path1):
     # paper1_path = 'C:/College/College Work/plagiarism-detection/backend/documents/ai content similarity-2.md'
-    paper2_path = 'C:/Users/Aditya Chandrn/Documents/Projects/college-projects/pd/backend/documents/research-paper-1.md'
+    # paper2_path = 'C:/Users/Aditya Chandrn/Documents/Projects/college-projects/pd/backend/documents/research-paper-1.md'
+    paper2_path = 'C:/Users/dhruv/Desktop/LY Project/backend/documents/test1.md'
 
     get_papers = GetPapers()
     paper1, paper2 = get_papers.load_papers(path1, paper2_path)

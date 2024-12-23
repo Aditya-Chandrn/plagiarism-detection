@@ -90,8 +90,8 @@ if __name__ == "__main__":
     detector = PlagiarismDetector(ngram_range=(1, 1), use_bert=False)
 
     # Replace these with your PDF paths
-    pdf1 = "documents/test3.pdf"
-    pdf2 = "documents/test1.pdf"
+    pdf1 = "documents/test1.pdf"
+    pdf2 = "documents/classification-of-human-and-ai-generated-texts-investigating.pdf"
 
     similarity = detector.calculate_similarity(pdf1, pdf2)
     print(f"Similarity score: {similarity:.4f}")
