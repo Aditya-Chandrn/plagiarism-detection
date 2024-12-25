@@ -1,8 +1,8 @@
-# from typing import List, Optional
-from typing_extensions import Annotated, List, Optional
+from typing import List, Optional, Any
+from typing_extensions import Annotated, Optional
 from pydantic import BaseModel, Field, ConfigDict
 from pydantic.functional_validators import BeforeValidator
-from datetime import datetime, timezone, date
+from datetime import datetime
 
 PyObjectId = Annotated[str, BeforeValidator(str)]
 
@@ -21,6 +21,7 @@ class Similarity(BaseModel):
       bert_score: float
       tfidf_score: float
       score: float
+      plagiarized_content: dict[str, Any]
       
       
 class Document(BaseModel):

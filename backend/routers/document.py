@@ -4,13 +4,12 @@ from dotenv import dotenv_values
 import os
 from fastapi.responses import JSONResponse, FileResponse
 from .utils import verify_token, convert_to_md, detect_ai_generated_content, detect_similarity, read_md_file, scrape_and_save_research_papers
-from concurrent.futures import ProcessPoolExecutor
-import asyncio
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import shutil
 from pydantic_models import document_schemas
 from database import document_collection
 from bson import ObjectId
-from fastapi.encoders import jsonable_encoder
+
 config = dotenv_values(".env")
 
 router = APIRouter(prefix="/document", tags=["document"])
@@ -21,7 +20,7 @@ DOCUMENTS_FOLDER = os.path.join(os.path.dirname(__file__), "..", "documents")
 os.makedirs(DOCUMENTS_FOLDER, exist_ok=True)
 
 # Create a global executor for CPU-bound tasks
-executor = ProcessPoolExecutor()
+executor = ThreadPoolExecutor(max_workers=5)
 
 
 @router.post("/upload")
@@ -68,8 +67,8 @@ async def upload_document(token_data: dict = Depends(verify_token), document: Up
         print(f"Markdown conversion failed: {str(e)}")
         return JSONResponse(content={"error": f"Markdown conversion failed: {str(e)}"}, status_code=500)
 
+    # Read MD Content and Extract Title
     try:
-        # Read MD Content and Extract Title
         md_content = read_md_file(standardized_md_path)
         title = md_content.split('\n')[0].replace('#', '').strip()
 
@@ -88,30 +87,36 @@ async def upload_document(token_data: dict = Depends(verify_token), document: Up
 
 
     # AI and Similarity Score Computation
+    results = []
+
     try:
         ai_score_future = executor.submit(
             detect_ai_generated_content, standardized_md_path)
-        text_similarity_future = executor.submit(
-            detect_similarity, standardized_md_path)
-
-        # Await the results asynchronously
-        ai_score_ans, text_similarity_ans = await asyncio.gather(
-            asyncio.to_thread(ai_score_future.result),
-            asyncio.to_thread(text_similarity_future.result)
-        )
-        print(
-            f"AI Score: {ai_score_ans}, Text Similarity Score: {text_similarity_ans}")
-
+        text_similarity_futures = [
+            executor.submit(detect_similarity, standardized_md_path, paper['md_path'])
+            for paper in scraped_paper_details
+        ]
+    
+        # Wait for all futures to complete
+        ai_score = ai_score_future.result()
+        text_similarity_scores = [future.result() for future in text_similarity_futures]
+    
+        results.append({
+            "ai_score": ai_score,
+            "text_similarity_scores": text_similarity_scores
+        })
+    
     except Exception as e:
-        print(f"Error in AI/Similarity computation: {str(e)}")
-        return JSONResponse(content={"error": f"Score computation failed: {str(e)}"}, status_code=500)
-
+        print(f"Error during AI and similarity score computation: {str(e)}")
+        return JSONResponse(content={"error": f"Failed to compute AI and similarity scores: {str(e)}"}, status_code=500)
+    
+    # ...existing code...
     """
     Create DB Record for the uploaded document.
     """
 
-    ai_score_dict = [ai.dict() for ai in ai_score_ans]
-    similarity_score_dict = [sim.dict() for sim in text_similarity_ans]
+    ai_score_dict = [ai.dict() for ai in ai_score]
+    similarity_score_dict = text_similarity_scores
     user_id = token_data.get("user_id")
 
     new_document = await document_collection.insert_one({

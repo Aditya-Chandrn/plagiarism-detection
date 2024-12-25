@@ -10,6 +10,7 @@ import faiss
 from transformers import AutoTokenizer, AutoModel
 from typing import List, Tuple
 import torch
+from nltk.corpus import stopwords
 
 
 
@@ -288,13 +289,13 @@ class PlagiarismDetector:
             }
 
 
-def research_similarity(path1):
-    paper2_path = 'C:/College/College Work/plagiarism-detection/backend/documents/ai content similarity-2.md'
+def research_similarity(path1, path2):
+    # paper2_path = 'C:/College/College Work/plagiarism-detection/backend/documents/ai content similarity-2.md'
     # paper2_path = 'C:/Users/Aditya Chandrn/Documents/Projects/college-projects/pd/backend/documents/research-paper-1.md'
-    # paper2_path = 'C:/Users/dhruv/Desktop/LY Project/backend/documents/test1.md'
+    paper2_path = 'C:/Users/dhruv/Desktop/LY Project/backend/documents/test1.md'
 
     get_papers = GetPapers()
-    paper1, paper2 = get_papers.load_papers(path1, paper2_path)
+    paper1, paper2 = get_papers.load_papers(path1, path2)
 
     if not paper1 or not paper2:
         print("Error loading papers")

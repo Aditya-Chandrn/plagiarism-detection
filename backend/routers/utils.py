@@ -112,31 +112,23 @@ async def convert_to_md(file_path: str) -> str:
         raise ValueError(f"Unsupported file type: {file_path}")
 
 
-def detect_similarity(path1) -> List[Similarity]:
-    # result for uploaded paper vs 1st webscraped paper
-    result1 = research_similarity.research_similarity(path1)
-    # result for uploaded paper vs 2nd webscraped paper
-    result2 = research_similarity.research_similarity(path1)
+def detect_similarity(path1, path2):
+    # result for uploaded paper vs ith webscraped paper
+    result = research_similarity.research_similarity(path1, path2)
+
+    print("----------------------HEREEEEEEEEEEEEEEE----------------------", result)
 
     return [
         Similarity(
             source=SimilaritySource(
-                name=result1["data"]["name"],
-                url=result1["data"]["url"]
+                name=result["data"]["name"],
+                url=result["data"]["url"]
             ),
-            bert_score=result1["bert_score"],
-            tfidf_score=result1["tfidf_score"],
-            score=result1["score"]
+            bert_score=result["bert_score"],
+            tfidf_score=result["tfidf_score"],
+            score=result["score"],
+            plagiarized_content=result["plagiarized_content"]["sources"]
         ),
-        Similarity(
-            source=SimilaritySource(
-                name=result2["data"]["name"],
-                url=result2["data"]["url"]
-            ),
-            bert_score=result2["bert_score"],
-            tfidf_score=result2["tfidf_score"],
-            score=result2["score"]
-        )
     ]
 
 
@@ -156,7 +148,7 @@ async def scrape_and_save_research_papers(title):
     output_folder = Path("backend/documents/scraped_papers")
     output_folder.mkdir(parents=True, exist_ok=True)
 
-    result = get_arxiv_papers(query = title, max_results=2)
+    result = get_arxiv_papers(query = title, max_results=1)
 
     scraped_papers = []
 
