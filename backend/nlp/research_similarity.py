@@ -1,13 +1,16 @@
 import re
 import nltk
-from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
-from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 import numpy as np
+import faiss
+from transformers import AutoTokenizer, AutoModel
+from typing import List, Tuple
+import torch
+
 
 
 class GetPapers:
@@ -139,10 +142,156 @@ class SimilarityCalculator:
         return combined_score, {"TF-IDF": tfidf_score, "BERT": bert_score}
 
 
+class PlagiarismDetector:
+    def __init__(self, model_name='sentence-transformers/all-MiniLM-L6-v2'):
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModel.from_pretrained(model_name)
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.model.to(self.device)
+        
+    def _clean_text(self, text: str) -> str:
+        """Clean text by removing extra whitespace and normalizing punctuation"""
+        # Normalize whitespace
+        text = re.sub(r'\s+', ' ', text)
+        # Ensure proper spacing around periods
+        text = re.sub(r'\.(?=[A-Za-z])', '. ', text)
+        return text.strip()
+    
+    def _split_into_sentences(self, text: str) -> List[str]:
+        """
+        Split text into sentences using regex with careful handling of 
+        abbreviations, numbers, and special cases
+        """
+        # Clean the text first
+        text = self._clean_text(text)
+        
+        # Split on periods while preserving them
+        potential_sentences = re.split(r'(?<=[.!?])\s+', text)
+        
+        # Filter and clean sentences
+        valid_sentences = []
+        for sent in potential_sentences:
+            # Clean the sentence
+            sent = sent.strip()
+            # Count words (excluding punctuation)
+            word_count = len(re.findall(r'\b\w+\b', sent))
+            
+            # Only keep sentences with 4 or more words
+            if word_count >= 4:
+                valid_sentences.append(sent)
+                
+        return valid_sentences
+
+    def _get_sentence_embeddings(self, sentences: List[str], batch_size=32) -> np.ndarray:
+        """Generate embeddings for sentences using batching"""
+        embeddings = []
+        
+        for i in range(0, len(sentences), batch_size):
+            batch = sentences[i:i + batch_size]
+            
+            # Tokenize with longer max length to handle longer sentences
+            encoded = self.tokenizer(
+                batch,
+                padding=True,
+                truncation=True,
+                max_length=512,
+                return_tensors="pt"
+            )
+            
+            encoded = {k: v.to(self.device) for k, v in encoded.items()}
+            
+            with torch.no_grad():
+                outputs = self.model(**encoded)
+                # Use mean pooling instead of just CLS token
+                attention_mask = encoded['attention_mask']
+                token_embeddings = outputs.last_hidden_state
+                input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+                sentence_embeddings = torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+                embeddings.append(sentence_embeddings.cpu().numpy())
+        
+        return np.vstack(embeddings)
+
+    def find_plagiarized_pairs(self, 
+                             source_text: str, 
+                             target_text: str,
+                             similarity_threshold: float = 0.92) -> List[Tuple[str, str, float]]:
+        """Find similar sentence pairs with improved accuracy"""
+        # Split into sentences with improved method
+        source_sentences = self._split_into_sentences(source_text)
+        target_sentences = self._split_into_sentences(target_text)
+        
+        if not source_sentences or not target_sentences:
+            return []
+
+        # Get embeddings
+        source_embeddings = self._get_sentence_embeddings(source_sentences)
+        target_embeddings = self._get_sentence_embeddings(target_sentences)
+        
+        # Normalize embeddings
+        faiss.normalize_L2(source_embeddings)
+        faiss.normalize_L2(target_embeddings)
+        
+        # Create FAISS index
+        dimension = source_embeddings.shape[1]
+        index = faiss.IndexFlatIP(dimension)
+        index.add(source_embeddings)
+        
+        # Find similar sentences
+        similarities, indices = index.search(target_embeddings, k=1)
+        
+        # Collect valid matches
+        plagiarized_pairs = []
+        for i, (similarity, idx) in enumerate(zip(similarities, indices)):
+            similarity_score = similarity[0]
+            
+            if similarity_score >= similarity_threshold:
+                source_sent = source_sentences[idx[0]]
+                target_sent = target_sentences[i]
+                
+                # Additional validation
+                if self._is_valid_match(source_sent, target_sent):
+                    plagiarized_pairs.append((source_sent, target_sent, similarity_score))
+        
+        return plagiarized_pairs
+    
+    def _is_valid_match(self, source_sent: str, target_sent: str) -> bool:
+        """Additional validation for matched pairs"""
+        # Ignore if either sentence is too short
+        if len(source_sent.split()) < 4 or len(target_sent.split()) < 4:
+            return False
+            
+        # Ignore if sentences are just numbers or punctuation
+        if not re.search(r'[A-Za-z]', source_sent) or not re.search(r'[A-Za-z]', target_sent):
+            return False
+        
+        # Ignore if sentences are too different in length
+        source_words = len(source_sent.split())
+        target_words = len(target_sent.split())
+        if max(source_words, target_words) / min(source_words, target_words) > 2:
+            return False
+            
+        return True
+
+    def get_plagiarized_sentences(self, 
+                                    source_text: str, 
+                                    target_text: str,
+                                    similarity_threshold: float = 0.92) -> dict:
+            """
+            Returns dictionary containing arrays of plagiarized sentences and their sources
+            """
+            pairs = self.find_plagiarized_pairs(source_text, target_text, similarity_threshold)
+            
+            return {
+                'plagiarized_sentences': [pair[1] for pair in pairs],  # Sentences from paper2
+                'source_sentences': [pair[0] for pair in pairs],       # Original sentences from paper1
+                'similarity_scores': [pair[2] for pair in pairs]       # Similarity scores
+            }
+
+
 def research_similarity(path1):
-    # paper1_path = 'C:/College/College Work/plagiarism-detection/backend/documents/ai content similarity-2.md'
+    paper2_path = 'C:/College/College Work/plagiarism-detection/backend/documents/ai content similarity-2.md'
     # paper2_path = 'C:/Users/Aditya Chandrn/Documents/Projects/college-projects/pd/backend/documents/research-paper-1.md'
-    paper2_path = 'C:/Users/dhruv/Desktop/LY Project/backend/documents/test1.md'
+    # paper2_path = 'C:/Users/dhruv/Desktop/LY Project/backend/documents/test1.md'
 
     get_papers = GetPapers()
     paper1, paper2 = get_papers.load_papers(path1, paper2_path)
@@ -150,6 +299,9 @@ def research_similarity(path1):
     if not paper1 or not paper2:
         print("Error loading papers")
         return
+    
+    detector = PlagiarismDetector()
+    plagiarism_results = detector.get_plagiarized_sentences(paper1, paper2)
 
     preprocessor = Preprocessor()
     sections_paper1 = preprocessor.extract_sections(paper1)
@@ -187,4 +339,17 @@ def research_similarity(path1):
             print(f"{section.capitalize():<15} : No content available")
         print()
 
-    return {"data": {"name": "src1", "url": "http://abc.com"}, "bert_score": bert_score, "tfidf_score": tfidf_score, "score": combined_score}
+    return {
+            "data": {
+                "name": "src1", 
+                "url": "http://abc.com"
+            },
+            "plagiarized_content": {
+                "sentences": plagiarism_results['plagiarized_sentences'],
+                "sources": plagiarism_results['source_sentences'],
+                "scores": plagiarism_results['similarity_scores']
+            },
+            "bert_score": bert_score,
+            "tfidf_score": tfidf_score,
+            "score": combined_score
+        }
