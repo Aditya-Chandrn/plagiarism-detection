@@ -4,10 +4,10 @@ from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer # type: ignore
 import numpy as np
-import faiss
-from transformers import AutoTokenizer, AutoModel
+import faiss # type: ignore
+from transformers import AutoTokenizer, AutoModel #type: ignore
 from typing import List, Tuple
 import torch
 from nltk.corpus import stopwords
@@ -45,45 +45,43 @@ class Preprocessor:
             'conclusion': '',
             'full_text': paper_content,
         }
-
+        
         section_patterns = {
-            'abstract': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:abstract).*?(?=\n#+|$)',
-            'introduction': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:introduction|background).*?(?=\n#+|$)',
-            'methodology': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:methodology|methods|materials and methods).*?(?=\n#+|$)',
-            'results': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:results|findings).*?(?=\n#+|$)',
-            'discussion': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:discussion).*?(?=\n#+|$)',
-            'conclusion': r'(?i)(?:^|\n)#+\s*(?:(?:[IVX]+\.?\s+)?)?(?:conclusion|final thoughts).*?(?=\n#+|$)'
+            'abstract': r'(?i)(?:^|\n)#{1,6}\s*(?:\d+\s+)?(?:.*?abstract|.*?summary).*?\n(.*?)(?=\n#{1,6}|$)',
+            'introduction': r'(?i)(?:^|\n)#{1,6}\s*(?:\d+\s+)?(?:.*?introduction|.*?background).*?\n(.*?)(?=\n#{1,6}|$)',
+            'methodology': r'(?i)(?:^|\n)#{1,6}\s*(?:\d+\s+)?(?:.*?methodology|.*?methods).*?\n(.*?)(?=\n#{1,6}|$)',
+            'results': r'(?i)(?:^|\n)#{1,6}\s*(?:\d+\s+)?(?:.*?results|.*?findings).*?\n(.*?)(?=\n#{1,6}|$)',
+            'discussion': r'(?i)(?:^|\n)#{1,6}\s*(?:\d+\s+)?(?:.*?discussion|.*?interpretation).*?\n(.*?)(?=\n#{1,6}|$)',
+            'conclusion': r'(?i)(?:^|\n)#{1,6}\s*(?:\d+\s+)?(?:.*?conclusion.*?(?:future)?|.*?final).*?\n(.*?)(?=\n#{1,6}|$)'
         }
 
         for section, pattern in section_patterns.items():
             match = re.search(pattern, paper_content, re.DOTALL)
-            match = re.search(pattern, paper_content, re.DOTALL)
             if match:
-                content = re.sub(r'^#+\s*\w+\s*', '',
-                                 match.group(0), flags=re.IGNORECASE)
-                sections[section] = content.strip()
+                content = match.group(1).strip()
+                if content:
+                    print(f"\n✅ Found {section.upper()}: {len(content)} chars")
+                    sections[section] = content
+                else:
+                    print(f"\n❌ Empty {section.upper()} section")
+            else:
+                print(f"\n❌ No {section.upper()} section found")
 
         return sections
-
+        
     def preprocess_text(self, text, use_lemmatization=True):
         if not text:
             return ''
-
         try:
-            text = re.sub(r'[^a-zA-Z0-9\s.,]', ' ', text)
-            text = text.lower()
-
+            text = re.sub(r'[^a-zA-Z0-9\s.,]', ' ', text).lower()
             tokens = nltk.word_tokenize(text)
-            filtered_tokens = [
-                self.word_lemmatizer.lemmatize(
-                    token) if use_lemmatization else token
+            processed_tokens = [
+                self.word_lemmatizer.lemmatize(token) if use_lemmatization else token
                 for token in tokens if token not in self.stop_words
             ]
-
-            return ' '.join(filtered_tokens)
-
+            return ' '.join(processed_tokens)
         except Exception as e:
-            print(f"Error in preprocessing: {str(e)}")
+            print(f"Error during preprocessing: {e}")
             return ''
 
 
@@ -276,7 +274,7 @@ class PlagiarismDetector:
     def get_plagiarized_sentences(self, 
                                     source_text: str, 
                                     target_text: str,
-                                    similarity_threshold: float = 0.92) -> dict:
+                                    similarity_threshold: float = 0.8) -> dict:
             """
             Returns dictionary containing arrays of plagiarized sentences and their sources
             """
@@ -292,19 +290,21 @@ class PlagiarismDetector:
 def research_similarity(path1, path2):
     # paper2_path = 'C:/College/College Work/plagiarism-detection/backend/documents/ai content similarity-2.md'
     # paper2_path = 'C:/Users/Aditya Chandrn/Documents/Projects/college-projects/pd/backend/documents/research-paper-1.md'
-    paper2_path = 'C:/Users/dhruv/Desktop/LY Project/backend/documents/test1.md'
+    # paper2_path = 'C:/Users/dhruv/Desktop/LY Project/backend/documents/test1.md'
 
     get_papers = GetPapers()
+    detector = PlagiarismDetector()
+    preprocessor = Preprocessor()
+    similarity_calculator = SimilarityCalculator()
+    
     paper1, paper2 = get_papers.load_papers(path1, path2)
 
     if not paper1 or not paper2:
         print("Error loading papers")
         return
     
-    detector = PlagiarismDetector()
     plagiarism_results = detector.get_plagiarized_sentences(paper1, paper2)
 
-    preprocessor = Preprocessor()
     sections_paper1 = preprocessor.extract_sections(paper1)
     sections_paper2 = preprocessor.extract_sections(paper2)
 
@@ -312,7 +312,6 @@ def research_similarity(path1, path2):
         print("Error extracting sections")
         return
 
-    similarity_calculator = SimilarityCalculator()
 
     print('Similarity Score by Sections')
     print('-'*30)
@@ -326,12 +325,9 @@ def research_similarity(path1, path2):
                 text1, text2)
             tfidf_score = similarity_calculator.calculate_tfidf_similarity(
                 text1, text2)
-            bert_score = similarity_calculator.calculate_bert_similarity(
+            bert_score = similarity_calculator.calculate_transformer_similarity(
                 text1, text2)
-
-            # print(f"{section.capitalize():<15}")
-            # print(f"Individual Scores: \nTF-IDF: {tfidf_score:.4f}, "
-            #       f"BERT: {bert_score:.4f}")
+            
             print(
                 f"{section.capitalize():<15} : Combined Score: {combined_score:.4f}")
             print(f"Individual Scores: TF-IDF: {individual_scores['TF-IDF']:.4f}, "
