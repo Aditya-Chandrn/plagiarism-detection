@@ -53,19 +53,22 @@ const sources = [
   },
 ];
 
-const highlightText = [
-  "Recent neural language models have taken a significant step forward in producing remarkably controllable, fluent, and grammatical text",
-  "argument logistics",
-  "AI has the potential to generate scientific content",
-  "The AI-generated scientific content is more likely to contain errors in factual issues",
-  "the ability to create human-like content with unprecedented speed presents additional technical and social challenges",
-  "The advances in NLG models have empowered writing aids, such as autocomplete",
+const SOURCE_COLORS = [
+  "#14b8a6", // teal
+  "#8b5cf6", // purple
+  "#ef4444", // red
+  "#3b82f6", // blue
+  "#10b981", // green
+  "#f59e0b", // amber
+  "#6366f1", // indigo
+  "#ec4899", // pink
 ];
 
 export default function Component() {
   const [report, setReport] = useState(null);
   const [activeSource, setActiveSource] = useState();
   const [fileContent, setFileContent] = useState("");
+  const [sources, setSources] = useState([]);
   const params = useParams();
 
   useEffect(() => {
@@ -117,6 +120,23 @@ export default function Component() {
     fetchFile();
   }, []);
 
+  useEffect(() => {
+    if (report?.similarity_result) {
+      const dynamicSources = report.similarity_result.map((result, index) => ({
+        id: `source${index + 1}`,
+        name: result.source.name,
+        url: result.source.url,
+        color: SOURCE_COLORS[index],
+        highlights: result.plagiarized_content.sources,
+      }));
+      setSources(dynamicSources);
+    }
+  }, [report]);
+
+  function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // Escapes special characters
+  }
+
   const highlightTextInMarkdown = (text) => {
     if (!text) return "";
 
@@ -127,7 +147,9 @@ export default function Component() {
 
     sourcesToUse.forEach((source) => {
       source.highlights.forEach((phrase) => {
-        const regex = new RegExp(`(${phrase})`, "gi");
+        const escapedPhrase = escapeRegExp(phrase);
+        const regex = new RegExp(`(${escapedPhrase})`, "gi");
+
         highlightedText = highlightedText.replace(
           regex,
           `<span style="background-color: ${source.color}40; color: ${source.color}; font-weight: 500; padding: 1px">$1</span>`

@@ -213,7 +213,7 @@ class PlagiarismDetector:
     def find_plagiarized_pairs(self, 
                              source_text: str, 
                              target_text: str,
-                             similarity_threshold: float = 0.92) -> List[Tuple[str, str, float]]:
+                             similarity_threshold: float = 0.45) -> List[Tuple[str, str, float]]:
         """Find similar sentence pairs with improved accuracy"""
         # Split into sentences with improved method
         source_sentences = self._split_into_sentences(source_text)
@@ -274,7 +274,7 @@ class PlagiarismDetector:
     def get_plagiarized_sentences(self, 
                                     source_text: str, 
                                     target_text: str,
-                                    similarity_threshold: float = 0.8) -> dict:
+                                    similarity_threshold: float = 0.45) -> dict:
             """
             Returns dictionary containing arrays of plagiarized sentences and their sources
             """

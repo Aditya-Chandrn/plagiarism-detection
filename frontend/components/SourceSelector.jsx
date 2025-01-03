@@ -33,7 +33,7 @@ export function SourceSelector({ sources, activeSource, onSourceSelect }) {
             </Button>
           </div>
         </div>
-        <ScrollArea className="h-[180px]">
+        <ScrollArea>
           <div className="space-y-1 p-2">
             {sources.map((source) => (
               <Tooltip key={source.id}>

@@ -2,17 +2,17 @@
     "languages": null,
     "filetype": "pdf",
     "toc": [],
-    "pages": 21,
+    "pages": 19,
     "ocr_stats": {
-        "ocr_pages": 1,
+        "ocr_pages": 0,
         "ocr_failed": 0,
-        "ocr_success": 1,
-        "ocr_engine": "surya"
+        "ocr_success": 0,
+        "ocr_engine": "none"
     },
     "block_stats": {
         "header_footer": 0,
         "code": 0,
-        "table": 0,
+        "table": 17,
         "equations": {
             "successful_ocr": 0,
             "unsuccessful_ocr": 0,
