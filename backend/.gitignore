@@ -8,5 +8,6 @@
 /server_venv
 
 /documents/*
+/scraped_papers/*
 
 /nlp/documents/*
