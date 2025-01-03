@@ -116,12 +116,6 @@ def detect_similarity(path1, path2):
     # result for uploaded paper vs ith webscraped paper
     result = research_similarity.research_similarity(path1, path2)
 
-    # print("----------------------HEREEEEEEEEEEEEEEE---------------------", result["plagiarized_content"])
-    # print("\n\n")
-    # print("----------------------HEREEEEEEEEEEEEEEE-1---------------------", result["plagiarized_content"]["sentences"])
-    # print("\n\n")
-    # print("----------------------HEREEEEEEEEEEEEEEE-2---------------------", result["plagiarized_content"]["sources"])
-
     return {
         "source": {
             "name": result["data"]["name"],
@@ -152,7 +146,7 @@ async def scrape_and_save_research_papers(title):
     output_folder = Path("scraped_papers")
     output_folder.mkdir(parents=True, exist_ok=True)
 
-    result = get_arxiv_papers(query = title, max_results=3)
+    result = get_arxiv_papers(query = title, max_results=2)
 
     scraped_papers = []
 

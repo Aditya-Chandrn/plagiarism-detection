@@ -100,10 +100,11 @@ export default function Component() {
   }, [params.id]);
 
   useEffect(() => {
+    if (!report) return;
     const fetchFile = async () => {
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/document/file/test.md`
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/document/file/classification-of-human-and-ai-generated-texts-investigating-1q5bto7ajj.md`
         );
 
         if (!response.ok) {
@@ -118,12 +119,12 @@ export default function Component() {
     };
 
     fetchFile();
-  }, []);
+  }, [report]);
 
   useEffect(() => {
     if (report?.similarity_result) {
       const dynamicSources = report.similarity_result.map((result, index) => ({
-        id: `source${index + 1}`,
+        id: `Source ${index + 1}`,
         name: result.source.name,
         url: result.source.url,
         color: SOURCE_COLORS[index],

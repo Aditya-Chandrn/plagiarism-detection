@@ -36,44 +36,27 @@ export function SourceSelector({ sources, activeSource, onSourceSelect }) {
         <ScrollArea>
           <div className="space-y-1 p-2">
             {sources.map((source) => (
-              <Tooltip key={source.id}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className={cn(
-                      "relative w-full justify-start gap-2 pl-8 text-left text-sm",
-                      activeSource === source.id &&
-                        "bg-accent text-accent-foreground"
-                    )}
-                    onClick={() => onSourceSelect(source.id)}
-                  >
-                    <div
-                      className="absolute left-2 h-3 w-3 rounded-full"
-                      style={{ backgroundColor: source.color }}
-                    />
-                    <span className="truncate">{source.name}</span>
-                    <span className="ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-muted px-1 text-xs tabular-nums">
-                      {source.highlights.length}
-                    </span>
-                    {activeSource === source.id && (
-                      <Check className="ml-1 h-3 w-3" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent
-                  side="bottom"
-                  className="max-w-[300px] bg-white text-black shadow-lg"
-                >
-                  <p className="text-sm font-medium">Highlighted Phrases:</p>
-                  <ul className="mt-2 list-inside list-disc text-sm text-muted-foreground">
-                    {source.highlights.map((highlight, index) => (
-                      <li key={index} className="truncate">
-                        {highlight}
-                      </li>
-                    ))}
-                  </ul>
-                </TooltipContent>
-              </Tooltip>
+              <Button
+                variant="ghost"
+                className={cn(
+                  "relative w-full justify-start gap-2 pl-8 text-left text-sm",
+                  activeSource === source.id &&
+                    "bg-accent text-accent-foreground"
+                )}
+                onClick={() => onSourceSelect(source.id)}
+              >
+                <div
+                  className="absolute left-2 h-3 w-3 rounded-full"
+                  style={{ backgroundColor: source.color }}
+                />
+                <span className="truncate">{source.id}</span>
+                <span className="ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-muted px-1 text-xs tabular-nums">
+                  {source.highlights.length}
+                </span>
+                {activeSource === source.id && (
+                  <Check className="ml-1 h-3 w-3" />
+                )}
+              </Button>
             ))}
           </div>
         </ScrollArea>
