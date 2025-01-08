@@ -20,6 +20,7 @@ from nlp.ai_detection.detect_gpt_detection import detect_gpt_main
 from pathlib import Path
 from paperscraper.pdf import save_pdf
 from paperscraper.arxiv import  get_arxiv_papers
+from .logger import logger
 
 config = dotenv_values(".env")
 
@@ -112,14 +113,16 @@ async def convert_to_md(file_path: str) -> str:
         raise ValueError(f"Unsupported file type: {file_path}")
 
 
-def detect_similarity(path1, path2):
+def detect_similarity(path1, path2, paper):
+    paper_name = paper["title"]
+    logger.info(f"Detection Similarity between uploaded paper and {paper_name}")
+
     # result for uploaded paper vs ith webscraped paper
     result = research_similarity.research_similarity(path1, path2)
-
     return {
         "source": {
-            "name": result["data"]["name"],
-            "url": result["data"]["url"]
+            "name": paper_name,
+            "url": "https://arxiv.org/abs/" + paper["doi"].split("arXiv.")[-1]
         },
         "bert_score": float(result["bert_score"]),
         "tfidf_score": float(result["tfidf_score"]),
@@ -131,6 +134,7 @@ def detect_similarity(path1, path2):
 
 
 def detect_ai_generated_content(file_path) -> List[AIGeneratedContent]:
+    logger.info(f"Detection AI Generated Content")
     roberta_score = roberta_ai_detection(file_path)
     # detect_gpt_score = detect_gpt_main(file_path)
     detect_gpt_score = 0.48
@@ -143,10 +147,12 @@ def detect_ai_generated_content(file_path) -> List[AIGeneratedContent]:
 
 
 async def scrape_and_save_research_papers(title):
+    logger.info(f"Scraping papers from ArXiv...")
+
     output_folder = Path("scraped_papers")
     output_folder.mkdir(parents=True, exist_ok=True)
 
-    result = get_arxiv_papers(query = title, max_results=2)
+    result = get_arxiv_papers(query = title, max_results = 2)
 
     scraped_papers = []
 
@@ -172,6 +178,6 @@ async def scrape_and_save_research_papers(title):
         }
         scraped_papers.append(paper_details)
 
-    print(f"PDFs downloaded into the '{output_folder}' folder.")
+    logger.info(f"Scraped papers + PDFs downloaded into the '{output_folder}' folder")
 
     return scraped_papers

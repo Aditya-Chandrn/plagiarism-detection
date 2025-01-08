@@ -19,40 +19,6 @@ import {
 } from "@/components/ui/accordion";
 import { SourceSelector } from "@/components/SourceSelector";
 
-const sources = [
-  {
-    id: "source1",
-    name: "Source 1",
-    color: "#ef4444",
-    highlights: [
-      "Recent neural language models have taken a significant step forward in producing remarkably controllable, fluent, and grammatical text",
-      "The advances in NLG models have empowered writing aids, such as autocomplete",
-      'We find that there exists a "writing style" gap between AI-generated scientific text and human-written scientific text',
-    ],
-  },
-  {
-    id: "source2",
-    name: "Source 2",
-    color: "#8b5cf6",
-    highlights: [
-      "AI has the potential to generate scientific content",
-      "The AI-generated scientific content is more likely to contain errors in factual issues",
-      "As strong as the NLG model is, it still makes mistakes, such as generating literal correct but inconsistent and counterfactual text",
-      "As the generation and the detection are a process of a mutual game that presents a spiral and wave-like evolution",
-    ],
-  },
-  {
-    id: "source3",
-    name: "Source 3",
-    color: "#059669",
-    highlights: [
-      "Moreover, we also conduct a case study from the view of coherence, consistency, and argument logistics",
-      "the ability to create human-like content with unprecedented speed presents additional technical and social challenges",
-      "AI writing assistant can support people in writing text such as songs, stories, press releases, interviews, essays, and technical manuals",
-    ],
-  },
-];
-
 const SOURCE_COLORS = [
   "#14b8a6", // teal
   "#8b5cf6", // purple
@@ -104,7 +70,9 @@ export default function Component() {
     const fetchFile = async () => {
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/document/file/classification-of-human-and-ai-generated-texts-investigating-1q5bto7ajj.md`
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/document/file/${
+            report.name.split(".")[0]
+          }.md`
         );
 
         if (!response.ok) {

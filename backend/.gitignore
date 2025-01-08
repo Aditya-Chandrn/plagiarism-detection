@@ -11,3 +11,5 @@
 /scraped_papers/*
 
 /nlp/documents/*
+
+/logs

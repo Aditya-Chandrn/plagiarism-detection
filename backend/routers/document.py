@@ -4,11 +4,12 @@ from dotenv import dotenv_values
 import os
 from fastapi.responses import JSONResponse, FileResponse
 from .utils import verify_token, convert_to_md, detect_ai_generated_content, detect_similarity, read_md_file, scrape_and_save_research_papers
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 import shutil
 from pydantic_models import document_schemas
 from database import document_collection
 from bson import ObjectId
+from .logger import logger
 
 config = dotenv_values(".env")
 
@@ -25,64 +26,71 @@ executor = ThreadPoolExecutor(max_workers=5)
 
 @router.post("/upload")
 async def upload_document(token_data: dict = Depends(verify_token), document: UploadFile = File(...)):
+    logger.info("Starting document upload process")
+    
     # Ensure DOCUMENTS_FOLDER is defined and used correctly
     if not os.path.exists(DOCUMENTS_FOLDER):
+        logger.info("Creating documents folder")
         os.makedirs(DOCUMENTS_FOLDER)
 
     # Save the uploaded document to a standard location
     try:
         file_path = os.path.join(DOCUMENTS_FOLDER, document.filename)
-        print(f"Saving file to: {file_path}")
-
-        # Save file
+        logger.info(f"Saving file...")
         # Save file
         content = await document.read()
         with open(file_path, "wb") as f:
             f.write(content)
-        print(f"File saved successfully: {file_path}")
+        logger.info(f"File saved successfully")
 
     except Exception as e:
-        print(f"Error while saving file: {str(e)}")
+        logger.error(f"Error while saving file: {str(e)}")
         return JSONResponse(content={"error": f"Failed to save file: {str(e)}"}, status_code=500)
 
     # Convert to Markdown
     try:
+        logger.info(f"Converting file to markdown...")
         md_file_path = await convert_to_md(file_path)
-        print(f"Converted to markdown: {md_file_path}")
+        logger.info(f"Converted file to markdown")
 
         # Move Markdown to standardized location
         standardized_md_path = os.path.join(
             DOCUMENTS_FOLDER, os.path.basename(md_file_path))
         
         if os.path.exists(standardized_md_path):
+            logger.info(f"Removing existing markdown file...")
             os.remove(standardized_md_path)  # Remove the existing file if it exists
         
         shutil.move(md_file_path, standardized_md_path)
-        print(f"Markdown file moved to: {standardized_md_path}")
+        logger.info(f"Markdown file moved to standardized location")
 
     except ValueError as e:
-        print(f"Markdown conversion error: {str(e)}")
+        logger.error(f"Markdown conversion error: {str(e)}")
         return JSONResponse(content={"error": str(e)}, status_code=400)
     except Exception as e:
-        print(f"Markdown conversion failed: {str(e)}")
+        logger.error(f"Markdown conversion failed: {str(e)}")
         return JSONResponse(content={"error": f"Markdown conversion failed: {str(e)}"}, status_code=500)
 
     # Read MD Content and Extract Title
     try:
+        logger.info(f"Reading markdown file...")
         md_content = read_md_file(standardized_md_path)
         title = md_content.split('\n')[0].replace('#', '').strip()
+        logger.info(f"Extracted title from markdown")
 
         # Scrape papers from ArXiv 
+        logger.info(f"Scraping papers from ArXiv...")
         scraped_paper_details = await scrape_and_save_research_papers(title)
 
         for paper in scraped_paper_details:
+            logger.info(f"Converting scraped paper to markdown")
             path = await convert_to_md(paper['path'])
             paper['md_path'] = path
         
-        print(f"Scraped papers converted to md: {scraped_paper_details}")
+        logger.info(f"Scraped papers converted to markdown")
        
     except Exception as e:
-        print(f"Error while scraping papers: {str(e)}")
+        logger.error(f"Error while scraping papers: {str(e)}")
         return JSONResponse(content={"error": f"Failed to scrape papers: {str(e)}"}, status_code=500)
 
 
@@ -90,10 +98,11 @@ async def upload_document(token_data: dict = Depends(verify_token), document: Up
     results = []
 
     try:
+        logger.info(f"Starting AI and similarity score computation")
         ai_score_future = executor.submit(
             detect_ai_generated_content, standardized_md_path)
         text_similarity_futures = [
-            executor.submit(detect_similarity, standardized_md_path, paper['md_path'])
+            executor.submit(detect_similarity, standardized_md_path, paper['md_path'], paper)
             for paper in scraped_paper_details
         ]
     
@@ -105,36 +114,39 @@ async def upload_document(token_data: dict = Depends(verify_token), document: Up
             "ai_score": ai_score,
             "text_similarity_scores": text_similarity_scores
         })
-    
+        logger.info(f"AI and similarity score computation completed")
+
     except Exception as e:
-        print(f"Error during AI and similarity score computation: {str(e)}")
+        logger.error(f"Error during AI and similarity score computation: {str(e)}")
         return JSONResponse(content={"error": f"Failed to compute AI and similarity scores: {str(e)}"}, status_code=500)
     
-    # ...existing code...
-    """
-    Create DB Record for the uploaded document.
-    """
+    # Create DB Record for the uploaded document
+    try:
+        logger.info("Creating DB record for the uploaded document")
+        ai_score_dict = [ai.dict() for ai in ai_score]
+        similarity_score_dict = text_similarity_scores
+        user_id = token_data.get("user_id")
 
-    ai_score_dict = [ai.dict() for ai in ai_score]
-    similarity_score_dict = text_similarity_scores
-    user_id = token_data.get("user_id")
+        new_document = await document_collection.insert_one({
+            "name": document.filename,
+            "path": file_path,
+            "md_path": standardized_md_path,
+            "ai_content_result": ai_score_dict,
+            "similarity_result": similarity_score_dict,
+            "upload_date": datetime.now(timezone.utc),
+            "user_id": ObjectId(user_id)
+        })
 
-    new_document = await document_collection.insert_one({
-        "name": document.filename,
-        "path": file_path,
-        "md_path": standardized_md_path,
-        "ai_content_result": ai_score_dict,
-        "similarity_result": similarity_score_dict,
-        "upload_date": datetime.now(timezone.utc),
-        "user_id": ObjectId(user_id)
-    })
+        db_document = await document_collection.find_one(
+            {"_id": new_document.inserted_id}
+        )
 
-    db_document = await document_collection.find_one(
-        {"_id": new_document.inserted_id}
-    )
-
-    return document_schemas.Document.model_validate(db_document)
-
+        logger.info(f"Document uploaded and saved to DB successfully")
+        return document_schemas.Document.model_validate(db_document)
+    
+    except Exception as e:
+        logger.error(f"Error while creating DB record: {str(e)}")
+        return JSONResponse(content={"error": f"Failed to create DB record: {str(e)}"}, status_code=500)
 
 @router.get("/")
 async def get_all_documents(token_data: dict = Depends(verify_token)):

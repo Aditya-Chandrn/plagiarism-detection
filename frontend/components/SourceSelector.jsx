@@ -35,8 +35,9 @@ export function SourceSelector({ sources, activeSource, onSourceSelect }) {
         </div>
         <ScrollArea>
           <div className="space-y-1 p-2">
-            {sources.map((source) => (
+            {sources.map((source, idx) => (
               <Button
+                key={idx}
                 variant="ghost"
                 className={cn(
                   "relative w-full justify-start gap-2 pl-8 text-left text-sm",
