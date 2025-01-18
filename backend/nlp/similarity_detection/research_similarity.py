@@ -13,7 +13,6 @@ import torch
 from nltk.corpus import stopwords
 
 
-
 class GetPapers:
     def load_papers(self, paper1_path, paper2_path):
 
@@ -288,10 +287,6 @@ class PlagiarismDetector:
 
 
 def research_similarity(path1, path2):
-    # paper2_path = 'C:/College/College Work/plagiarism-detection/backend/documents/ai content similarity-2.md'
-    # paper2_path = 'C:/Users/Aditya Chandrn/Documents/Projects/college-projects/pd/backend/documents/research-paper-1.md'
-    # paper2_path = 'C:/Users/dhruv/Desktop/LY Project/backend/documents/test1.md'
-
     get_papers = GetPapers()
     detector = PlagiarismDetector()
     preprocessor = Preprocessor()

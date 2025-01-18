@@ -2,7 +2,7 @@ from fastapi import FastAPI, status
 from routers import user, document
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from nlp.nltk_setup import download_nltk_data
+from nlp.similarity_detection.nltk_setup import download_nltk_data
 
 app = FastAPI(debug=True)
 

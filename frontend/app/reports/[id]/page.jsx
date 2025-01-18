@@ -47,13 +47,13 @@ export default function Component() {
         const document = response.data;
         const similarityScore = document.similarity_result?.length
           ? Math.ceil(
-              (document.similarity_result.reduce(
-                (sum, source) => sum + source.score,
-                0
-              ) /
-                document.similarity_result.length) *
-                100
-            )
+            (document.similarity_result.reduce(
+              (sum, source) => sum + source.score,
+              0
+            ) /
+              document.similarity_result.length) *
+            100
+          )
           : 0;
 
         setReport({ ...document, similarityScore });
@@ -69,10 +69,9 @@ export default function Component() {
     if (!report) return;
     const fetchFile = async () => {
       try {
+        const filename = report.name.replace('.pdf', '.md');
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/document/file/${
-            report.name.split(".")[0]
-          }.md`
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/document/file/${filename}`
         );
 
         if (!response.ok) {
@@ -135,13 +134,13 @@ export default function Component() {
     <div className="container mx-auto p-6">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">
-          Report Analysis: {report.name}
+          Report Analysis: { report.name }
         </h1>
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-lg border bg-card shadow-sm">
           <ScrollArea className="h-[calc(100vh-8rem)] w-full rounded-lg p-2">
-            <MarkdownView markdown={highlightTextInMarkdown(fileContent)} />
+            <MarkdownView markdown={ highlightTextInMarkdown(fileContent) } />
           </ScrollArea>
         </div>
 
@@ -155,9 +154,9 @@ export default function Component() {
                 <div className="space-y-4">
                   <h2 className="text-xl font-semibold">Source Highlights</h2>
                   <SourceSelector
-                    sources={sources}
-                    activeSource={activeSource}
-                    onSourceSelect={setActiveSource}
+                    sources={ sources }
+                    activeSource={ activeSource }
+                    onSourceSelect={ setActiveSource }
                   />
                 </div>
 
@@ -172,11 +171,11 @@ export default function Component() {
                       </span>
                     </div>
                     <span className="text-3xl font-bold text-red-700">
-                      {report.similarityScore}%
+                      { report.similarityScore }%
                     </span>
                   </div>
                   <Progress
-                    value={report.similarityScore}
+                    value={ report.similarityScore }
                     className="h-2.5 bg-red-200"
                     indicatorclassname="bg-red-600"
                   />
@@ -189,39 +188,39 @@ export default function Component() {
                     </AccordionTrigger>
                     <AccordionContent>
                       <div className="space-y-4 pt-4">
-                        {report.similarity_result?.map((result, index) => (
+                        { report.similarity_result?.map((result, index) => (
                           <div
-                            key={index}
+                            key={ index }
                             className="rounded-lg border bg-card p-4 shadow-sm"
                           >
                             <div className="flex items-start justify-between">
                               <div className="space-y-1">
                                 <h3 className="font-medium">
-                                  {result.source.name}
+                                  { result.source.name }
                                 </h3>
                                 <a
-                                  href={result.source.url}
+                                  href={ result.source.url }
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="flex items-center text-sm text-blue-600 hover:text-blue-800"
                                 >
-                                  {result.source.url}
+                                  { result.source.url }
                                   <ExternalLink className="ml-1 h-3 w-3" />
                                 </a>
                               </div>
                               <div className="flex flex-col gap-2">
                                 <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium">
-                                  Bert Score:{" "}
-                                  {Math.ceil(result.bert_score * 100)}% Match
+                                  Bert Score:{ " " }
+                                  { Math.ceil(result.bert_score * 100) }% Match
                                 </span>
                                 <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium">
-                                  TF-IDF Score:{" "}
-                                  {Math.ceil(result.tfidf_score * 100)}% Match
+                                  TF-IDF Score:{ " " }
+                                  { Math.ceil(result.tfidf_score * 100) }% Match
                                 </span>
                               </div>
                             </div>
                           </div>
-                        ))}
+                        )) }
                       </div>
                     </AccordionContent>
                   </AccordionItem>
@@ -233,8 +232,8 @@ export default function Component() {
                   <h2 className="text-xl font-semibold">
                     AI Detection Results
                   </h2>
-                  {report.ai_content_result?.map((result, index) => (
-                    <div key={index} className="rounded-xl bg-blue-50 p-6">
+                  { report.ai_content_result?.map((result, index) => (
+                    <div key={ index } className="rounded-xl bg-blue-50 p-6">
                       <div className="mb-4 flex items-start justify-between">
                         <div className="flex items-center gap-2">
                           <Bot className="h-5 w-5 text-blue-600" />
@@ -243,20 +242,20 @@ export default function Component() {
                           </span>
                         </div>
                         <span className="text-3xl font-bold text-blue-700">
-                          {Math.ceil(result.score * 100)}%
+                          { Math.ceil(result.score * 100) }%
                         </span>
                       </div>
                       <div className="mb-3 text-sm text-blue-700">
-                        <span className="font-medium">Method:</span>{" "}
-                        {result.method_name || "N/A"}
+                        <span className="font-medium">Method:</span>{ " " }
+                        { result.method_name || "N/A" }
                       </div>
                       <Progress
-                        value={Math.ceil(result.score * 100)}
+                        value={ Math.ceil(result.score * 100) }
                         className="h-2.5 bg-blue-200"
                         indicatorclassname="bg-blue-600"
                       />
                     </div>
-                  ))}
+                  )) }
                 </div>
               </div>
             </ScrollArea>

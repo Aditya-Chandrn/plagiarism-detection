@@ -6,7 +6,7 @@ from dotenv import dotenv_values
 from docx import Document as DocxDocument
 import subprocess
 import os
-from nlp import research_similarity
+from nlp.similarity_detection import research_similarity
 
 from nlp.ai_detection.roberta_ai_detection import roberta_ai_detection
 from nlp.ai_detection.detect_gpt_detection import detect_gpt_main
@@ -136,7 +136,7 @@ def detect_similarity(path1, path2, paper):
 def detect_ai_generated_content(file_path) -> List[AIGeneratedContent]:
     logger.info(f"Detection AI Generated Content")
     roberta_score = roberta_ai_detection(file_path)
-    # detect_gpt_score = detect_gpt_main(file_path)
+    detect_gpt_score = detect_gpt_main(file_path)
     detect_gpt_score = 0.48
 
     return [
