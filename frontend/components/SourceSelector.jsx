@@ -52,7 +52,7 @@ export function SourceSelector({ sources, activeSource, onSourceSelect }) {
                 />
                 <span className="truncate">{source.id}</span>
                 <span className="ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-muted px-1 text-xs tabular-nums">
-                  {source.highlights.length}
+                  {source.highlights.size}
                 </span>
                 {activeSource === source.id && (
                   <Check className="ml-1 h-3 w-3" />
