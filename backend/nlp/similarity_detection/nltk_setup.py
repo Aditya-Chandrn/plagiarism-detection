@@ -1,4 +1,4 @@
-import nltk
+import nltk # type: ignore
 
 # Function to download required NLTK packages
 

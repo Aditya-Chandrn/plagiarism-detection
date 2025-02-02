@@ -1,16 +1,17 @@
 import re
-import nltk
-from nltk.stem import WordNetLemmatizer
-from nltk.corpus import stopwords
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+import nltk # type: ignore
+from nltk.stem import WordNetLemmatizer # type: ignore
+from sklearn.feature_extraction.text import TfidfVectorizer # type: ignore
+from sklearn.metrics.pairwise import cosine_similarity  # type: ignore
 from sentence_transformers import SentenceTransformer # type: ignore
 import numpy as np
 import faiss # type: ignore
 from transformers import AutoTokenizer, AutoModel #type: ignore
 from typing import List, Tuple
-import torch
-from nltk.corpus import stopwords
+import torch # type: ignore
+from nltk.corpus import stopwords # type: ignore
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 
 class GetPapers:
@@ -33,6 +34,31 @@ class Preprocessor:
     def __init__(self):
         self.stop_words = set(stopwords.words('english'))
         self.word_lemmatizer = WordNetLemmatizer()
+        
+        self.cleaning_pattern = re.compile(r'[^a-zA-Z0-9\s.,]')
+
+        
+        # Pre-compile the regex patterns for section extraction
+        self.section_patterns = {
+            'abstract': re.compile(
+                r'(?i)(?:^|\n)#{1,6}\s*(?:\d+\s+)?(?:.*?abstract|.*?summary).*?\n(.*?)(?=\n#{1,6}|$)',
+                re.DOTALL),
+            'introduction': re.compile(
+                r'(?i)(?:^|\n)#{1,6}\s*(?:\d+\s+)?(?:.*?introduction|.*?background).*?\n(.*?)(?=\n#{1,6}|$)',
+                re.DOTALL),
+            'methodology': re.compile(
+                r'(?i)(?:^|\n)#{1,6}\s*(?:\d+\s+)?(?:.*?methodology|.*?methods).*?\n(.*?)(?=\n#{1,6}|$)',
+                re.DOTALL),
+            'results': re.compile(
+                r'(?i)(?:^|\n)#{1,6}\s*(?:\d+\s+)?(?:.*?results|.*?findings).*?\n(.*?)(?=\n#{1,6}|$)',
+                re.DOTALL),
+            'discussion': re.compile(
+                r'(?i)(?:^|\n)#{1,6}\s*(?:\d+\s+)?(?:.*?discussion|.*?interpretation).*?\n(.*?)(?=\n#{1,6}|$)',
+                re.DOTALL),
+            'conclusion': re.compile(
+                r'(?i)(?:^|\n)#{1,6}\s*(?:\d+\s+)?(?:.*?conclusion.*?(?:future)?|.*?final).*?\n(.*?)(?=\n#{1,6}|$)',
+                re.DOTALL)
+        }
 
     def extract_sections(self, paper_content):
         sections = {
@@ -44,18 +70,9 @@ class Preprocessor:
             'conclusion': '',
             'full_text': paper_content,
         }
-        
-        section_patterns = {
-            'abstract': r'(?i)(?:^|\n)#{1,6}\s*(?:\d+\s+)?(?:.*?abstract|.*?summary).*?\n(.*?)(?=\n#{1,6}|$)',
-            'introduction': r'(?i)(?:^|\n)#{1,6}\s*(?:\d+\s+)?(?:.*?introduction|.*?background).*?\n(.*?)(?=\n#{1,6}|$)',
-            'methodology': r'(?i)(?:^|\n)#{1,6}\s*(?:\d+\s+)?(?:.*?methodology|.*?methods).*?\n(.*?)(?=\n#{1,6}|$)',
-            'results': r'(?i)(?:^|\n)#{1,6}\s*(?:\d+\s+)?(?:.*?results|.*?findings).*?\n(.*?)(?=\n#{1,6}|$)',
-            'discussion': r'(?i)(?:^|\n)#{1,6}\s*(?:\d+\s+)?(?:.*?discussion|.*?interpretation).*?\n(.*?)(?=\n#{1,6}|$)',
-            'conclusion': r'(?i)(?:^|\n)#{1,6}\s*(?:\d+\s+)?(?:.*?conclusion.*?(?:future)?|.*?final).*?\n(.*?)(?=\n#{1,6}|$)'
-        }
 
-        for section, pattern in section_patterns.items():
-            match = re.search(pattern, paper_content, re.DOTALL)
+        for section, pattern in self.section_patterns.items():
+            match = pattern.search(paper_content)
             if match:
                 content = match.group(1).strip()
                 if content:
@@ -66,13 +83,14 @@ class Preprocessor:
             else:
                 print(f"\n❌ No {section.upper()} section found")
 
-        return sections
-        
+        return sections   
+    
     def preprocess_text(self, text, use_lemmatization=True):
         if not text:
             return ''
         try:
-            text = re.sub(r'[^a-zA-Z0-9\s.,]', ' ', text).lower()
+            # Use the precompiled pattern for cleaning text
+            text = self.cleaning_pattern.sub(' ', text).lower()
             tokens = nltk.word_tokenize(text)
             processed_tokens = [
                 self.word_lemmatizer.lemmatize(token) if use_lemmatization else token
@@ -110,11 +128,16 @@ class SimilarityCalculator:
         text2_chunks = self._chunk_text(text2)
 
         similarities = []
-        for chunk1 in text1_chunks:
-            for chunk2 in text2_chunks:
+
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            future_to_pair = {
+                executor.submit(self.calculate_bert_similarity, chunk1, chunk2): (chunk1, chunk2)
+                for chunk1 in text1_chunks for chunk2 in text2_chunks
+            }
+            for future in as_completed(future_to_pair):
                 try:
-                    similarity = self.calculate_bert_similarity(chunk1, chunk2)
-                    similarities.append(similarity)
+                    sim = future.result()
+                    similarities.append(sim)
                 except Exception as e:
                     print(f"Error in chunk similarity calculation: {e}")
                     similarities.append(0.0)
@@ -147,37 +170,25 @@ class PlagiarismDetector:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model.to(self.device)
         
+        # Pre-compile regex patterns for cleaning and sentence splitting
+        self.whitespace_pattern = re.compile(r'\s+')
+        self.sentence_split_pattern = re.compile(r'(?<=[.!?])\s+')
+        self.word_pattern = re.compile(r'\b\w+\b')
+
     def _clean_text(self, text: str) -> str:
-        """Clean text by removing extra whitespace and normalizing punctuation"""
-        # Normalize whitespace
-        text = re.sub(r'\s+', ' ', text)
-        # Ensure proper spacing around periods
+        text = self.whitespace_pattern.sub(' ', text)
         text = re.sub(r'\.(?=[A-Za-z])', '. ', text)
         return text.strip()
     
     def _split_into_sentences(self, text: str) -> List[str]:
-        """
-        Split text into sentences using regex with careful handling of 
-        abbreviations, numbers, and special cases
-        """
-        # Clean the text first
         text = self._clean_text(text)
-        
-        # Split on periods while preserving them
-        potential_sentences = re.split(r'(?<=[.!?])\s+', text)
-        
-        # Filter and clean sentences
+        potential_sentences = self.sentence_split_pattern.split(text)
         valid_sentences = []
         for sent in potential_sentences:
-            # Clean the sentence
             sent = sent.strip()
-            # Count words (excluding punctuation)
-            word_count = len(re.findall(r'\b\w+\b', sent))
-            
-            # Only keep sentences with 4 or more words
+            word_count = len(self.word_pattern.findall(sent))
             if word_count >= 4:
                 valid_sentences.append(sent)
-                
         return valid_sentences
 
     def _get_sentence_embeddings(self, sentences: List[str], batch_size=32) -> np.ndarray:
