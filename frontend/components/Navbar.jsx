@@ -22,18 +22,18 @@ const Navbar = () => {
           </Link>
 
           <nav className="flex items-center space-x-12">
-            <Link href="/" className="text-base hover:text-gray-600">
+            {/* <Link href="/" className="text-base hover:text-gray-600">
               Features
             </Link>
             <Link href="/" className="text-base hover:text-gray-600">
               Pricing
-            </Link>
-            <Link href="/" className="text-base hover:text-gray-600">
+            </Link> */}
+            {/* <Link href="/" className="text-base hover:text-gray-600">
               About
-            </Link>
+            </Link> */}
             <Link href="/login" className="text-base hover:text-gray-600">
-              <Button variant="outline" className="text-base font-normal">
-                Sign In
+              <Button variant="outline" className="text-base font-normal" asChild>
+                <Link href="/login">Sign In</Link>
               </Button>
             </Link>
           </nav>

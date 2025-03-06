@@ -1,12 +1,13 @@
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
+import Link from "next/link"
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
 
-      {/* Hero Section */}
+      {/* Hero Section */ }
       <main className="pt-32 pb-20">
         <div className="container mx-auto px-6">
           <div className="max-w-[800px] mx-auto text-center">
@@ -24,19 +25,19 @@ export default function LandingPage() {
               </p>
             </div>
             <div className="flex items-center justify-center space-x-4">
-              <Button
+              <Button asChild
                 size="lg"
                 className="h-14 px-8 text-lg bg-black hover:bg-black/90 rounded-md"
               >
-                Check Document
+                <Link href="/reports">Check Document</Link>
               </Button>
-              <Button
+              {/* <Button
                 variant="outline"
                 size="lg"
                 className="h-14 px-8 text-lg border-2 rounded-md"
               >
                 Learn More
-              </Button>
+              </Button> */}
             </div>
           </div>
         </div>
