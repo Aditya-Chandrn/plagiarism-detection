@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Any, Dict
-from fastapi import APIRouter, status
+from routers.utils import verify_token
+from fastapi import APIRouter, status, Request
 from fastapi.responses import JSONResponse
 from database import user_collection
 from pydantic_models import user_schema, auth_token_schemas
@@ -62,9 +63,17 @@ async def login_user(user: user_schema.UserLogin):
             content={"detail": "Incorrect Password"}
         )
 
+    # data = {
+    #     "fname": db_user["fname"],
+    #     "lname": db_user["lname"],
+    #     "email": db_user["email"],
+    #     "user_id": str(db_user["_id"]),
+    # }
+    # auth_token = create_auth_token(data)
+    
+    display_name = f"{db_user['fname']} {db_user['lname']}"
     data = {
-        "fname": db_user["fname"],
-        "lname": db_user["lname"],
+        "display_name": display_name,
         "email": db_user["email"],
         "user_id": str(db_user["_id"]),
     }
@@ -80,3 +89,17 @@ async def login_user(user: user_schema.UserLogin):
         max_age=3600*24*300     # token expiry in seconds
     )
     return response
+
+
+@router.post("/logout", status_code=status.HTTP_200_OK)
+async def logout_user():
+    response = JSONResponse(content={"message": "Logout successful"})
+    response.delete_cookie(key="plagiarism-access-token", path="/")
+    return response
+
+
+@router.get("/me")
+async def get_current_user(request: Request):
+    payload = await verify_token(request)
+    display_name = payload.get("display_name", "")
+    return {"display_name": display_name}

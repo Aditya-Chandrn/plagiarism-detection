@@ -124,7 +124,7 @@ export default function Component() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <UploadDocument />
+        {/* <UploadDocument /> */}
       </div>
       <div className="rounded-lg border">
         <Table>

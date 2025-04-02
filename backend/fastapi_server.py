@@ -1,5 +1,5 @@
 from fastapi import FastAPI, status
-from routers import user, document
+from routers import user, document, submission
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from nlp.similarity_detection.nltk_setup import download_nltk_data
@@ -25,6 +25,7 @@ app.mount("/static", StaticFiles(directory="documents"), name="documents")
 
 app.include_router(user.router)
 app.include_router(document.router)
+app.include_router(submission.router)
 
 
 @app.get("/", status_code=status.HTTP_200_OK)

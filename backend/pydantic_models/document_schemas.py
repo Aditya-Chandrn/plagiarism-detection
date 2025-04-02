@@ -29,7 +29,7 @@ class Document(BaseModel):
       user_id: Optional[PyObjectId] = Field(alias="_id", default=None)
       name: str
       path: str
-      md_path: str
+      md_path: Optional[str] = None
       ai_content_result: List[AIGeneratedContent]
       similarity_result: List[Similarity]
       upload_date: datetime

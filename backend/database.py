@@ -9,5 +9,6 @@ database = client[config["DATABASE_NAME"]]
 
 user_collection = database["users"]
 document_collection = database["documents"]
+submission_collection = database["submissions"]
 
 print("Connected to the MongoDB!")

@@ -1,7 +1,51 @@
+"use client"
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import axios from "axios";
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 const Navbar = () => {
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const [displayName, setDisplayName] = useState("");
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        const res = await axios.get(`${BACKEND_URL}/user/me`, {
+          withCredentials: true,
+        });
+        if (res.data && res.data.display_name) {
+          setDisplayName(res.data.display_name);
+        }
+      } catch (error) {
+        console.error("Error fetching user info:", error);
+      }
+    }
+    fetchUser();
+  }, [BACKEND_URL, pathname]);
+
+  const handleLogout = async () => {
+    const confirmed = window.confirm("Are you sure you want to log out?");
+    if (confirmed) {
+      try {
+        // Call the backend logout endpoint to remove the HttpOnly cookie.
+        await axios.post(`${BACKEND_URL}/user/logout`, null, {
+          withCredentials: true,
+        });
+        // Clear the display name.
+        setDisplayName("");
+        // Redirect to login page.
+        router.push("/login");
+      } catch (error) {
+        console.error("Error logging out:", error);
+      }
+    }
+  };
+
+
   return (
     <header className="fixed top-0 left-0 right-0 bg-white z-50">
       <div className="container mx-auto px-6">
@@ -33,8 +77,24 @@ const Navbar = () => {
             </Link> */}
             <Link href="/login" className="text-base hover:text-gray-600">
               <Button variant="outline" className="text-base font-normal" asChild>
-                <Link href="/login">Sign In</Link>
+                <Link href="/submission">Paper Upload</Link>
               </Button>
+              <Button variant="outline" className="text-base font-normal" asChild>
+                <Link href="/submission/summary">Report Summary</Link>
+              </Button>
+              { displayName ? (
+                // If logged in, display the user's name.
+                <span className="text-base font-bold text-indigo-600 underline hover:text-indigo-800 cursor-pointer"
+                  onClick={ handleLogout }
+                  title="Click to logout"
+                >
+                  { displayName }
+                </span>
+              ) : (
+                <Button variant="outline" className="text-base font-normal" asChild>
+                  <Link href="/login">Sign In</Link>
+                </Button>
+              ) }
             </Link>
           </nav>
         </div>
