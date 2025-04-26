@@ -87,7 +87,7 @@ const ReportPreview = ({ report }) => {
               </div>
             </DialogContent>
           </Dialog> */}
-          <Link href={"/reports/1"}>
+          <Link href={"/pages/reports/1"}>
             <Button variant="outline" size="sm">
               <Eye className="mr-2 h-4 w-4" />
               View

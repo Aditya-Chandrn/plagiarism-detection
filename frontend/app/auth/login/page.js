@@ -56,7 +56,7 @@ export default function LoginPage() {
         );
         console.log(response);
 
-        router.push("/reports");
+        router.push("/pages/reports");
       } catch (error) {
         console.log(error);
 
@@ -80,7 +80,7 @@ export default function LoginPage() {
           <p className="mt-2 text-sm text-gray-600">
             Don't have an account?{ " " }
             <a
-              href="/signup"
+              href="/auth/signup"
               className="font-medium text-blue-600 hover:text-blue-500"
             >
               Sign up

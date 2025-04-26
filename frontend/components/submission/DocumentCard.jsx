@@ -52,7 +52,7 @@ export default function DocumentCard({ doc, onUpdate }) {
 	return (
 		<div className="bg-white shadow rounded p-4 mb-4 flex flex-col">
 			{/* Link only wraps the title and metadata */ }
-			<Link href={ `/reports/${doc._id}` } className="block">
+			<Link href={ `/pages/reports/${doc._id}` } className="block">
 				<div className="cursor-pointer">
 					<h3 className="text-xl font-semibold">{ doc.name }</h3>
 					{ doc.upload_date ? (

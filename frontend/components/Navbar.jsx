@@ -38,7 +38,7 @@ const Navbar = () => {
         // Clear the display name.
         setDisplayName("");
         // Redirect to login page.
-        router.push("/login");
+        router.push("/auth/login");
       } catch (error) {
         console.error("Error logging out:", error);
       }
@@ -75,12 +75,12 @@ const Navbar = () => {
             {/* <Link href="/" className="text-base hover:text-gray-600">
               About
             </Link> */}
-            <Link href="/login" className="text-base hover:text-gray-600">
+            <Link href="/auth/login" className="text-base hover:text-gray-600">
               <Button variant="outline" className="text-base font-normal" asChild>
-                <Link href="/submission">Paper Upload</Link>
+                <Link href="/pages/submission">Paper Upload</Link>
               </Button>
               <Button variant="outline" className="text-base font-normal" asChild>
-                <Link href="/submission/summary">Report Summary</Link>
+                <Link href="/pages/submission/summary">Report Summary</Link>
               </Button>
               { displayName ? (
                 // If logged in, display the user's name.
@@ -92,7 +92,7 @@ const Navbar = () => {
                 </span>
               ) : (
                 <Button variant="outline" className="text-base font-normal" asChild>
-                  <Link href="/login">Sign In</Link>
+                  <Link href="/auth/login">Sign In</Link>
                 </Button>
               ) }
             </Link>

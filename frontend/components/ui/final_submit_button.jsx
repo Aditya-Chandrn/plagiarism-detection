@@ -35,7 +35,7 @@ export default function FinalSubmitComponent({ disabled }) {
 			
 			dispatch({ type: "RESET" });
 			
-			router.push("/submission/summary");
+			router.push("/pages/submission/summary");
 		
 		} catch (error) {
 			setMessage("Submission failed: " + error.message);

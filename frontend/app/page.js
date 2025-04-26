@@ -31,7 +31,7 @@ export default function LandingPage() {
                 size="lg"
                 className="h-14 px-8 text-lg bg-black hover:bg-black/90 rounded-md"
               >
-                <Link href="/submission">Check Document</Link>
+                <Link href="/pages/submission">Check Document</Link>
               </Button>
               {/* <Button
                 variant="outline"

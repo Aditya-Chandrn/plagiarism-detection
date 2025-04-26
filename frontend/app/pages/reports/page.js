@@ -209,7 +209,7 @@ export default function Component() {
                 </TableCell>
                 <TableCell>
                   <div className="flex justify-center gap-4">
-                    <Link href={`reports/${report._id}`}>
+                    <Link href={`/pages/reports/${report._id}`}>
                       <Button variant="ghost" size="sm">
                         <Eye className="h-4 w-4" />
                         <span className="ml-2">View</span>

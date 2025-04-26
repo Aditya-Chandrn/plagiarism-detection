@@ -20,7 +20,6 @@
 
 import "../globals.css";
 import { Toaster } from "@/components/ui/toaster";
-import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";
 
 export const metadata = {
@@ -32,12 +31,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className="antialiased">
-        <Providers>
           <Navbar />
           <div>
             { children }
           </div>
-        </Providers>
         <Toaster />
       </body>
     </html>

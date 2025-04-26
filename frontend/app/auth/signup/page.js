@@ -62,7 +62,7 @@ export default function SignUpPage() {
           formData
         );
 
-        router.push("/login");
+        router.push("/auth/login");
 
         toast({
           title: "Signed Up successfully",
@@ -90,7 +90,7 @@ export default function SignUpPage() {
           <p className="mt-2 text-sm text-gray-600">
             Already have an account?{" "}
             <a
-              href="/login"
+              href="/auth/login"
               className="font-medium text-blue-600 hover:text-blue-500"
             >
               Log in
