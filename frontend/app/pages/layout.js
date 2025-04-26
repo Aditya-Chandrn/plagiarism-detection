@@ -18,7 +18,7 @@
 //   );
 // }
 
-import "./globals.css";
+import "../globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";

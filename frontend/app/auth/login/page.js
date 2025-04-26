@@ -71,14 +71,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
+    <div className="flex h-[87vh] items-center justify-center bg-gray-100">
       <div className="w-full max-w-md space-y-8 rounded-xl bg-white p-10 shadow-md">
         <div className="text-center">
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
             Welcome back
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Don't have an account?{" "}
+            Don't have an account?{ " " }
             <a
               href="/signup"
               className="font-medium text-blue-600 hover:text-blue-500"
@@ -87,7 +87,7 @@ export default function LoginPage() {
             </a>
           </p>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={ handleSubmit } className="space-y-6">
           <div>
             <Label htmlFor="email">Email</Label>
             <Input
@@ -95,12 +95,12 @@ export default function LoginPage() {
               name="email"
               type="email"
               placeholder="john@example.com"
-              value={formData.email}
-              onChange={handleChange}
+              value={ formData.email }
+              onChange={ handleChange }
             />
-            {errors.email && (
-              <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-            )}
+            { errors.email && (
+              <p className="mt-1 text-sm text-red-600">{ errors.email }</p>
+            ) }
           </div>
           <div>
             <Label htmlFor="password">Password</Label>
@@ -108,28 +108,28 @@ export default function LoginPage() {
               <Input
                 id="password"
                 name="password"
-                type={showPassword ? "text" : "password"}
+                type={ showPassword ? "text" : "password" }
                 placeholder="********"
-                value={formData.password}
-                onChange={handleChange}
+                value={ formData.password }
+                onChange={ handleChange }
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={ () => setShowPassword(!showPassword) }
               >
-                {showPassword ? (
+                { showPassword ? (
                   <EyeOff className="h-4 w-4 text-gray-500" />
                 ) : (
                   <Eye className="h-4 w-4 text-gray-500" />
-                )}
+                ) }
               </Button>
             </div>
-            {errors.password && (
-              <p className="mt-1 text-sm text-red-600">{errors.password}</p>
-            )}
+            { errors.password && (
+              <p className="mt-1 text-sm text-red-600">{ errors.password }</p>
+            ) }
           </div>
 
           <Button type="submit" className="w-full">
