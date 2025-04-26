@@ -39,14 +39,8 @@ async def process_documents_background(document_ids: list):
 async def submit_manuscript(
     submission: submission_schemas.SubmissionCreate,
     token_data: dict = Depends(verify_token),
-    background_tasks: BackgroundTasks = None
+    background_tasks: BackgroundTasks = None  # you can even drop this param if you like
 ):
-    """
-    Final manuscript submission.
-    Creates a submission record immediately and schedules background processing
-    for each document concurrently using asyncio.gather.
-    Returns immediately so that the user can be redirected to a common summary page.
-    """
     logger.info("Processing final manuscript submission")
     try:
         user_id = token_data.get("user_id")
@@ -55,7 +49,7 @@ async def submit_manuscript(
             "abstract": submission.abstract,
             "keywords": submission.keywords,
             "authors": [author.dict() for author in submission.authors],
-            "document_ids": submission.document_ids,  # Array of document IDs from frontend
+            "document_ids": submission.document_ids,
             "reviewers": [rev.dict() for rev in submission.reviewers],
             "letter": submission.letter,
             "submission_date": datetime.now(timezone.utc),
@@ -63,17 +57,18 @@ async def submit_manuscript(
         }
         new_submission = await submission_collection.insert_one(submission_data)
         submission_id = str(new_submission.inserted_id)
-        
-        # Schedule background processing for all documents concurrently.
-        if background_tasks:
-            background_tasks.add_task(process_documents_background, submission_data["document_ids"])
-        
+
         logger.info("Manuscript submitted successfully")
-        return {"message": "Manuscript submitted successfully", "submission_id": submission_id}
-    
+        return {
+            "message": "Manuscript submitted successfully",
+            "submission_id": submission_id
+        }
     except Exception as e:
         logger.error(f"Error during final submission: {str(e)}")
-        return JSONResponse(content={"error": f"Submission failed: {str(e)}"}, status_code=500)
+        return JSONResponse(
+            content={"error": f"Submission failed: {str(e)}"},
+            status_code=500
+        )
 
 # ---------------------------
 # GET Endpoint to Retrieve All Submissions (GET /submission/)
@@ -94,14 +89,37 @@ async def get_all_submissions(token_data: dict = Depends(verify_token)):
         raise HTTPException(status_code=500, detail=f"Error retrieving submissions: {str(e)}")
 
 # ---------------------------
+# GET Endpoint to Retrieve Submission details by document id
+# ---------------------------
+
+
+@router.get("/by-document/{document_id}", response_model=submission_schemas.SubmissionResponse)
+async def get_submission_by_document(
+    document_id: str,
+    token_data: dict = Depends(verify_token),
+):
+    """
+    Return the submission that contains the given document_id in its document_ids.
+    """
+    submission = await submission_collection.find_one({
+        "document_ids": document_id  # match on string ID
+    })
+    if not submission:
+        raise HTTPException(404, "Submission not found for this document")
+
+    return submission_schemas.SubmissionResponse(**submission)
+
+
+# ---------------------------
 # GET Endpoint to Retrieve a Specific Submission (GET /submission/{submission_id})
 # ---------------------------
-@router.get("/{submission_id}")
-async def get_submission(submission_id: str, token_data: dict = Depends(verify_token)):
-    """
-    Retrieve a specific submission by ID.
-    """
+
+@router.get("/{submission_id}", response_model=submission_schemas.SubmissionResponse)
+async def get_submission(
+    submission_id: str,
+    token_data: dict = Depends(verify_token),
+):
     submission = await submission_collection.find_one({"_id": ObjectId(submission_id)})
     if not submission:
-        raise HTTPException(status_code=404, detail="Submission not found")
+        raise HTTPException(404, "Submission not found")
     return submission_schemas.SubmissionResponse(**submission)

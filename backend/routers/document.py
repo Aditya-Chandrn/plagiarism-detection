@@ -87,8 +87,8 @@ async def process_document(document_id: str, token_data: dict = Depends(verify_t
     2. Reads the Markdown file to extract the title.
     3. Scrapes research papers using the title.
     4. Converts each scraped paper sequentially to Markdown and moves it to the SCRAPED_FOLDER.
-    5. Computes AI-generated content and similarity scores using the uploaded document’s Markdown
-       and the scraped papers’ Markdown files.
+    5. Computes AI-generated content and similarity scores using the uploaded documents Markdown
+       and the scraped papers Markdown files.
     6. Updates the document record with the results.
     """
     logger.info(f"Processing document ID: {document_id}")
