@@ -35,6 +35,7 @@ const Navbar = () => {
         await axios.post(`${BACKEND_URL}/user/logout`, null, {
           withCredentials: true,
         });
+        localStorage.removeItem('submissionData');
         // Clear the display name.
         setDisplayName("");
         // Redirect to login page.
