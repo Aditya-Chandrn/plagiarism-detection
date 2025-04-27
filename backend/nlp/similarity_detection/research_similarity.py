@@ -13,7 +13,6 @@ from nltk.corpus import stopwords # type: ignore
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
-
 class GetPapers:
     def load_papers(self, paper1_path, paper2_path):
 
